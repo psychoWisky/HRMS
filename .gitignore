@@ -1,0 +1,27 @@
+# Python
+backend/venv/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+backend/.env
+*.log
+
+# Local database (SQLite fallback for development)
+backend/*.db
+backend/*.sqlite3
+
+# Uploaded KYC documents — never commit employee documents
+backend/uploads/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+frontend/.env*.local
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini

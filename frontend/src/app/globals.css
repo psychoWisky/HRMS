@@ -1,0 +1,253 @@
+@import "tailwindcss";
+
+/* ============================================================
+   AVFU HRMS — Dark Green / White / Black design system
+   Simple fonts, boxy shapes, clear borders + soft shadows.
+   Professional, familiar, easy to read (big type for all ages).
+   ============================================================ */
+@theme {
+  /* surfaces */
+  --color-bg: #f4f6f5;        /* very light green-grey page */
+  --color-surface: #ffffff;
+  --color-surface-2: #eef2f0;
+
+  /* brand — dark green */
+  --color-green: #14532d;     /* primary dark green */
+  --color-green-deep: #0d3d20;
+  --color-green-soft: #1b6a3c;
+  --color-green-tint: #e6efe9;
+
+  /* black / ink */
+  --color-ink: #0f1411;       /* near-black text */
+  --color-ink-soft: #41504a;
+  --color-ink-faint: #6d7a74;
+
+  /* lines */
+  --color-line: #d4ddd8;
+  --color-line-strong: #b9c6bf;
+
+  /* states (kept within green/black/white spirit; minimal accents) */
+  --color-success: #14532d;
+  --color-danger: #8a1c1c;
+  --color-warn: #6b5510;
+
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* boxy: small radius only */
+  --radius: 8px;
+  --radius-sm: 6px;
+
+  /* defined shadows + borders */
+  --shadow: 0 1px 0 rgba(15, 20, 17, 0.04), 0 2px 6px rgba(15, 20, 17, 0.06);
+  --shadow-md: 0 2px 4px rgba(15, 20, 17, 0.06), 0 8px 20px -8px rgba(15, 20, 17, 0.16);
+  --shadow-green: 0 6px 16px -6px rgba(20, 83, 45, 0.45);
+}
+
+@layer base {
+  :root {
+    font-size: 17px;
+  }
+  html, body {
+    background-color: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: inherit;
+  }
+  ::selection {
+    background: var(--color-green);
+    color: #fff;
+  }
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 0;
+    border: 3px solid var(--color-bg);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-green-soft); }
+}
+
+@layer components {
+  /* boxy card with border + shadow */
+  .card {
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold transition-all duration-150 select-none;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid transparent;
+  }
+  .btn-primary {
+    background: var(--color-green);
+    color: #fff;
+    border-color: var(--color-green-deep);
+    box-shadow: var(--shadow-green);
+  }
+  .btn-primary:hover { background: var(--color-green-deep); }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-ghost {
+    background: var(--color-surface);
+    color: var(--color-green);
+    border-color: var(--color-line-strong);
+  }
+  .btn-ghost:hover { background: var(--color-green-tint); border-color: var(--color-green-soft); }
+  .btn-danger {
+    background: #fff;
+    color: var(--color-danger);
+    border-color: #e2c4c4;
+  }
+  .btn-danger:hover { background: #fbf0f0; }
+
+  .input {
+    @apply w-full px-4 py-3 text-base outline-none transition-all duration-150;
+    background: #fff;
+    border: 1.5px solid var(--color-line-strong);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink);
+  }
+  .input:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(20, 83, 45, 0.14);
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-semibold;
+    color: var(--color-ink-soft);
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-sm font-semibold;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid transparent;
+  }
+
+  /* left accent bar used on section headers */
+  .accent-bar {
+    width: 5px;
+    height: 26px;
+    background: var(--color-green);
+    border-radius: 2px;
+  }
+}
+
+/* ============================================================
+   Organisation tree — column-stacked, file-explorer style.
+   Every level nests directly beneath its parent; depth is shown
+   with a left guide line and indent rather than side-by-side
+   boxes, so it never needs horizontal scrolling or panning.
+   ============================================================ */
+@layer components {
+  .org-tree {
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-line);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+  }
+
+  .org-tree ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .org-tree li {
+    list-style: none;
+  }
+
+  /* Guide line running down the left of every nested group. */
+  .org-children {
+    margin-left: 15px;
+    padding-left: 17px;
+    border-left: 2px solid var(--color-line);
+  }
+
+  .org-row {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-left: 3px solid transparent;
+    border-radius: var(--radius-sm);
+    padding-left: 8px;
+    transition: background-color 0.12s;
+  }
+  .org-row:hover {
+    background: var(--color-surface-2);
+  }
+  .org-row[data-top] {
+    background: var(--color-green-tint);
+    margin-bottom: 4px;
+  }
+  .org-row[data-top]:hover {
+    background: var(--color-green-tint);
+    filter: brightness(0.98);
+  }
+
+  .org-row-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    margin-top: 6px;
+    flex-shrink: 0;
+    color: var(--color-ink-faint);
+    border-radius: var(--radius-sm);
+  }
+  .org-row-toggle:not(:disabled):hover {
+    background: var(--color-line);
+    color: var(--color-ink);
+  }
+  .org-row-toggle:disabled {
+    cursor: default;
+  }
+  .org-row-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--color-line-strong);
+  }
+
+  .org-type-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+    border: 1.5px solid var(--color-line);
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .org-row-staff {
+    flex-shrink: 0;
+    align-self: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-green);
+    padding: 5px 10px;
+  }
+  .org-row-staff:hover {
+    text-decoration: underline;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .shimmer {
+    background: linear-gradient(100deg, var(--color-surface-2) 30%, #fff 50%, var(--color-surface-2) 70%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+}
