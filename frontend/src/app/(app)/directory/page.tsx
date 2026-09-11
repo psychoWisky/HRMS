@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Building2, Search, Users } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { useAuth } from "@/lib/auth";
+import { OrgUnitSelect } from "@/components/OrgUnitSelect";
 import { Avatar, Empty, SectionTitle, Skeleton } from "@/components/ui";
 
 interface EmployeeSummary {
@@ -22,12 +23,6 @@ interface EmployeeSummary {
   phone: string;
   reports_to: string | null;
   reports_to_id: number | null;
-}
-
-interface OrgOption {
-  id: number;
-  name: string;
-  org_type: string;
 }
 
 interface LocationOption {
@@ -52,7 +47,6 @@ export default function DirectoryPage() {
   }, [query, orgId, locationId]);
 
   const { data, loading } = useApi<EmployeeSummary[]>(path);
-  const { data: orgs } = useApi<OrgOption[]>("/api/org-units");
   const { data: locations } = useApi<LocationOption[]>("/api/locations");
 
   const rows = data ?? [];
@@ -83,18 +77,12 @@ export default function DirectoryPage() {
             />
           </div>
           {!isDeptHead && (
-            <select
-              className="input md:w-64"
-              value={orgId}
-              onChange={(e) => setOrgId(e.target.value)}
-            >
-              <option value="">All organisations</option>
-              {(orgs ?? []).map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+            <OrgUnitSelect
+              className="md:w-64"
+              value={orgId ? Number(orgId) : null}
+              onChange={(id) => setOrgId(id ? String(id) : "")}
+              placeholder="All establishments / departments"
+            />
           )}
           <select
             className="input md:w-52"

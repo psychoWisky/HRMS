@@ -7,6 +7,7 @@ import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { Column, DataTable } from "@/components/DataTable";
+import { OrgUnitSelect } from "@/components/OrgUnitSelect";
 import { titleize } from "@/lib/format";
 import { SectionTitle, Spinner, StatusBadge } from "@/components/ui";
 
@@ -17,8 +18,8 @@ interface CustomField {
   field_type: string;
   options: string[];
   is_required: boolean;
-  organization_id: number | null;
-  organization_name: string | null;
+  org_unit_id: number | null;
+  org_unit_name: string | null;
   help_text: string;
   is_active: boolean;
 }
@@ -26,15 +27,10 @@ interface CustomField {
 interface DocRequirement {
   id: number;
   label: string;
-  organization_id: number | null;
-  organization_name: string | null;
+  org_unit_id: number | null;
+  org_unit_name: string | null;
   is_required: boolean;
   is_active: boolean;
-}
-
-interface Option {
-  id: number;
-  name: string;
 }
 
 const FIELD_TYPES = ["text", "number", "date", "boolean", "select"];
@@ -45,11 +41,11 @@ const BLANK_FIELD = {
   field_type: "text",
   options: "",
   is_required: false,
-  organization_id: "",
+  org_unit_id: "",
   help_text: "",
 };
 
-const BLANK_DOC = { label: "", organization_id: "", is_required: true };
+const BLANK_DOC = { label: "", org_unit_id: "", is_required: true };
 
 export default function CustomFieldsPage() {
   const { push } = useToast();
@@ -59,7 +55,6 @@ export default function CustomFieldsPage() {
     useApi<CustomField[]>("/api/custom-fields");
   const { data: docs, loading: docsLoading, reload: reloadDocs } =
     useApi<DocRequirement[]>("/api/custom-documents");
-  const { data: orgs } = useApi<Option[]>("/api/org-units");
 
   const [fieldOpen, setFieldOpen] = useState(false);
   const [fieldForm, setFieldForm] = useState({ ...BLANK_FIELD });
@@ -78,8 +73,8 @@ export default function CustomFieldsPage() {
           ? fieldForm.options.split(",").map((o) => o.trim()).filter(Boolean)
           : [],
         is_required: fieldForm.is_required,
-        organization_id: fieldForm.organization_id
-          ? Number(fieldForm.organization_id)
+        org_unit_id: fieldForm.org_unit_id
+          ? Number(fieldForm.org_unit_id)
           : null,
         help_text: fieldForm.help_text,
       });
@@ -112,7 +107,7 @@ export default function CustomFieldsPage() {
     try {
       await api.post("/api/custom-documents", {
         label: docForm.label,
-        organization_id: docForm.organization_id ? Number(docForm.organization_id) : null,
+        org_unit_id: docForm.org_unit_id ? Number(docForm.org_unit_id) : null,
         is_required: docForm.is_required,
       });
       push("success", "Document requirement added");
@@ -153,8 +148,8 @@ export default function CustomFieldsPage() {
     { header: "Type", value: (r) => r.field_type, cell: (r) => titleize(r.field_type) },
     {
       header: "Applies to",
-      value: (r) => r.organization_name ?? "University-wide",
-      cell: (r) => r.organization_name ?? "University-wide",
+      value: (r) => r.org_unit_name ?? "University-wide",
+      cell: (r) => r.org_unit_name ?? "University-wide",
     },
     {
       header: "Required",
@@ -189,8 +184,8 @@ export default function CustomFieldsPage() {
     { header: "Document type", value: (r) => r.label, cell: (r) => r.label },
     {
       header: "Applies to",
-      value: (r) => r.organization_name ?? "University-wide",
-      cell: (r) => r.organization_name ?? "University-wide",
+      value: (r) => r.org_unit_name ?? "University-wide",
+      cell: (r) => r.org_unit_name ?? "University-wide",
     },
     {
       header: "Required",
@@ -335,20 +330,13 @@ export default function CustomFieldsPage() {
           )}
           <div>
             <label className="label">Applies to (leave blank for university-wide)</label>
-            <select
-              className="input"
-              value={fieldForm.organization_id}
-              onChange={(e) =>
-                setFieldForm({ ...fieldForm, organization_id: e.target.value })
+            <OrgUnitSelect
+              value={fieldForm.org_unit_id ? Number(fieldForm.org_unit_id) : null}
+              onChange={(id) =>
+                setFieldForm({ ...fieldForm, org_unit_id: id ? String(id) : "" })
               }
-            >
-              <option value="">University-wide</option>
-              {(orgs ?? []).map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+              placeholder="University-wide"
+            />
           </div>
           <div>
             <label className="label">Help text (optional)</label>
@@ -391,18 +379,11 @@ export default function CustomFieldsPage() {
           </div>
           <div>
             <label className="label">Applies to (leave blank for university-wide)</label>
-            <select
-              className="input"
-              value={docForm.organization_id}
-              onChange={(e) => setDocForm({ ...docForm, organization_id: e.target.value })}
-            >
-              <option value="">University-wide</option>
-              {(orgs ?? []).map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+            <OrgUnitSelect
+              value={docForm.org_unit_id ? Number(docForm.org_unit_id) : null}
+              onChange={(id) => setDocForm({ ...docForm, org_unit_id: id ? String(id) : "" })}
+              placeholder="University-wide"
+            />
           </div>
           <label className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)]">
             <input

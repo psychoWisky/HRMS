@@ -23,7 +23,6 @@ export const P = {
   structureManage: "structure:manage",
 
   designationManage: "designation:manage",
-  postManage: "post:manage",
   reportingManage: "reporting:manage",
 
   submissionReview: "submission:review",
@@ -35,5 +34,4 @@ export const P = {
   roleManage: "role:manage",
 
   auditRead: "audit:read",
-  settingsManage: "settings:manage",
 } as const;

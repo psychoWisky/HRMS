@@ -16,6 +16,7 @@ import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { Column, DataTable } from "@/components/DataTable";
+import { OrgUnitSelect } from "@/components/OrgUnitSelect";
 import { fmtBytes, fmtDateTime, titleize } from "@/lib/format";
 import {
   Empty,
@@ -122,7 +123,6 @@ export default function SubmissionsPage() {
   }, [status]);
 
   const { data, loading, reload } = useApi<Submission[]>(path);
-  const { data: orgs } = useApi<Option[]>("/api/org-units");
   const { data: designations } = useApi<Option[]>("/api/designations");
   const { data: locations } = useApi<Option[]>("/api/locations");
   const { data: employees } = useApi<EmployeeOption[]>("/api/directory?limit=1000");
@@ -436,20 +436,13 @@ export default function SubmissionsPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="label">Office / org unit</label>
-                    <select
-                      className="input"
-                      value={placement.org_unit_id}
-                      onChange={(e) =>
-                        setPlacement({ ...placement, org_unit_id: e.target.value })
+                    <OrgUnitSelect
+                      value={placement.org_unit_id ? Number(placement.org_unit_id) : null}
+                      onChange={(id) =>
+                        setPlacement({ ...placement, org_unit_id: id ? String(id) : "" })
                       }
-                    >
-                      <option value="">Not assigned</option>
-                      {(orgs ?? []).map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.name}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Not assigned"
+                    />
                   </div>
                   <div>
                     <label className="label">Designation</label>

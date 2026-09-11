@@ -1,4 +1,4 @@
-"""User accounts, roles, permissions, audit log and system settings."""
+"""User accounts, roles, permissions and audit log."""
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -9,7 +9,6 @@ from app.core.deps import client_ip, require_perm
 from app.core.permissions import (
     AUDIT_READ,
     ROLE_MANAGE,
-    SETTINGS_MANAGE,
     USER_MANAGE,
     USER_RESET_PASSWORD,
 )
@@ -19,7 +18,6 @@ from app.models.models import (
     Employee,
     Permission,
     Role,
-    SystemSetting,
     User,
 )
 from app.models.models import OrgUnit
@@ -30,8 +28,6 @@ from app.schemas.schemas import (
     RoleCreate,
     RoleOut,
     RoleUpdate,
-    SettingOut,
-    SettingUpdate,
     UserActiveUpdate,
     UserOut,
     UserRoleUpdate,
@@ -379,44 +375,3 @@ def audit_logs(
         query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
     )
     return [AuditLogOut.model_validate(r) for r in rows]
-
-
-# ---------------------------------------------------------------------------
-# System settings
-# ---------------------------------------------------------------------------
-@router.get("/settings", response_model=list[SettingOut])
-def list_settings(
-    db: Session = Depends(get_db), actor: User = Depends(require_perm(SETTINGS_MANAGE))
-):
-    return [
-        SettingOut.model_validate(s)
-        for s in db.query(SystemSetting).order_by(SystemSetting.key).all()
-    ]
-
-
-@router.put("/settings/{key}", response_model=SettingOut)
-def update_setting(
-    key: str,
-    payload: SettingUpdate,
-    request: Request,
-    db: Session = Depends(get_db),
-    actor: User = Depends(require_perm(SETTINGS_MANAGE)),
-):
-    setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
-    if setting is None:
-        setting = SystemSetting(key=key, value=payload.value)
-        db.add(setting)
-    else:
-        setting.value = payload.value
-    audit.log(
-        db,
-        actor,
-        "settings.update",
-        entity_type="setting",
-        entity_id=key,
-        summary=f"Updated setting '{key}'",
-        ip=client_ip(request),
-    )
-    db.commit()
-    db.refresh(setting)
-    return SettingOut.model_validate(setting)

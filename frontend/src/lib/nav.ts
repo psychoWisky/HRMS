@@ -1,6 +1,5 @@
 import {
   Building2,
-  ClipboardCheck,
   FileBarChart2,
   Inbox,
   KeyRound,
@@ -9,7 +8,6 @@ import {
   MapPin,
   Network,
   ScrollText,
-  Settings,
   ShieldCheck,
   SlidersHorizontal,
   User,
@@ -96,12 +94,6 @@ export const NAV: NavGroup[] = [
         anyOf: [P.designationManage],
       },
       {
-        label: "Posts & Vacancies",
-        href: "/manage/posts",
-        icon: ClipboardCheck,
-        anyOf: [P.postManage],
-      },
-      {
         label: "Reporting Hierarchy",
         href: "/manage/reporting",
         icon: Network,
@@ -147,12 +139,6 @@ export const NAV: NavGroup[] = [
         href: "/manage/audit",
         icon: ScrollText,
         anyOf: [P.auditRead],
-      },
-      {
-        label: "Settings",
-        href: "/manage/settings",
-        icon: Settings,
-        anyOf: [P.settingsManage],
       },
     ],
   },

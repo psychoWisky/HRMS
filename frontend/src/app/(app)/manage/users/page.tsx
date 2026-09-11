@@ -9,6 +9,7 @@ import { P } from "@/lib/perms";
 import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { Column, DataTable } from "@/components/DataTable";
+import { OrgUnitSelect } from "@/components/OrgUnitSelect";
 import { fmtDateTime, titleize } from "@/lib/format";
 import { SectionTitle, Spinner, StatusBadge } from "@/components/ui";
 
@@ -25,11 +26,6 @@ interface UserRow {
   hrms_employee_id: string | null;
   managed_org_unit_id: number | null;
   managed_org_unit_name: string | null;
-}
-
-interface OrgOption {
-  id: number;
-  name: string;
 }
 
 interface RoleRow {
@@ -66,7 +62,6 @@ export default function ManageUsersPage() {
   const { data: permissions } = useApi<PermissionRow[]>(
     can(P.roleManage) ? "/api/admin/permissions" : null
   );
-  const { data: orgs } = useApi<OrgOption[]>("/api/org-units");
 
   const [credential, setCredential] = useState<Credential | null>(null);
   const [editingRole, setEditingRole] = useState<RoleRow | null>(null);
@@ -179,18 +174,12 @@ export default function ManageUsersPage() {
       value: (r) => r.managed_org_unit_name ?? "",
       cell: (r) =>
         r.role_code === "department_head" ? (
-          <select
-            className="input px-2 py-1.5 text-sm"
-            value={r.managed_org_unit_id ?? ""}
-            onChange={(e) => changeScope(r, e.target.value)}
-          >
-            <option value="">Not assigned</option>
-            {(orgs ?? []).map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          <OrgUnitSelect
+            className="min-w-[220px] text-sm"
+            value={r.managed_org_unit_id ?? null}
+            onChange={(id) => changeScope(r, id ? String(id) : "")}
+            placeholder="Not assigned"
+          />
         ) : (
           <span className="text-[var(--color-ink-faint)]">
             {r.role_code === "admin" || r.role_code === "hr_admin"

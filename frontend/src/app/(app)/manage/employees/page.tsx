@@ -20,6 +20,7 @@ import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { Column, DataTable } from "@/components/DataTable";
 import { OrgUnitPicker } from "@/components/OrgUnitPicker";
+import { OrgUnitSelect } from "@/components/OrgUnitSelect";
 import { fmtDate, titleize } from "@/lib/format";
 import {
   Avatar,
@@ -113,7 +114,6 @@ export default function ManageEmployeesPage() {
   }, [orgId, includeInactive]);
 
   const { data, loading, reload } = useApi<EmployeeRow[]>(path);
-  const { data: orgs } = useApi<Option[]>("/api/org-units?limit=1000");
   const { data: locations } = useApi<Option[]>("/api/locations");
   const { data: designations } = useApi<Option[]>("/api/designations");
 
@@ -552,18 +552,12 @@ export default function ManageEmployeesPage() {
         searchPlaceholder="Search name, HRMS ID, email, designation or office"
         toolbar={
           <>
-            <select
-              className="input w-auto min-w-[200px] py-2.5"
-              value={orgId}
-              onChange={(e) => setOrgId(e.target.value)}
-            >
-              <option value="">All establishments/departments</option>
-              {(orgs ?? []).map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+            <OrgUnitSelect
+              className="w-auto min-w-[240px]"
+              value={orgId ? Number(orgId) : null}
+              onChange={(id) => setOrgId(id ? String(id) : "")}
+              placeholder="All establishments / departments"
+            />
             <label className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)]">
               <input
                 type="checkbox"

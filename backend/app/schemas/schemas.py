@@ -928,17 +928,6 @@ class AuditLogOut(ORMModel):
     created_at: datetime
 
 
-class SettingOut(ORMModel):
-    id: int
-    key: str
-    value: str
-    description: str
-    updated_at: datetime
-
-
-class SettingUpdate(BaseModel):
-    value: str
-
 
 OrgUnitNode.model_rebuild()
 OfficeDetail.model_rebuild()

@@ -70,7 +70,6 @@ ROLE_MANAGE = "role:manage"
 
 # system
 AUDIT_READ = "audit:read"
-SETTINGS_MANAGE = "settings:manage"
 
 
 PERMISSIONS: list[tuple[str, str, str]] = [
@@ -107,14 +106,13 @@ PERMISSIONS: list[tuple[str, str, str]] = [
     (USER_RESET_PASSWORD, "Users", "Reset another user's password"),
     (ROLE_MANAGE, "Users", "Manage roles and permissions"),
     (AUDIT_READ, "System", "Read audit logs"),
-    (SETTINGS_MANAGE, "System", "Manage system configuration"),
 ]
 
 ALL_PERMISSION_CODES = [p[0] for p in PERMISSIONS]
 
 # HR: full operational authority over HRMS data and document verification.
 HR_ADMIN_PERMISSIONS = [
-    c for c in ALL_PERMISSION_CODES if c not in (ROLE_MANAGE, SETTINGS_MANAGE)
+    c for c in ALL_PERMISSION_CODES if c not in (ROLE_MANAGE,)
 ]
 
 # Admin: everything.
