@@ -8,18 +8,25 @@ import { Logo } from "./Logo";
 
 export function Sidebar({
   permissions,
+  role,
   onNavigate,
 }: {
   permissions: string[];
+  role?: string;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const groups = navForPermissions(permissions);
+  const groups = navForPermissions(permissions, role);
 
   return (
-    <aside className="flex h-full w-[270px] flex-col border-r border-[var(--color-line)] bg-[var(--color-surface)]">
-      <div className="border-b border-[var(--color-line)] px-6 py-5">
-        <Logo size={40} />
+    <aside className="sticky top-0 flex h-screen max-h-screen w-[290px] shrink-0 flex-col border-r border-[var(--color-line)] bg-[var(--color-surface)]">
+      <div className="border-b border-[var(--color-line)] px-6 py-6">
+        <div className="flex flex-col items-center text-center">
+          <Logo size={84} showText={false} />
+          <p className="mt-3 max-w-[220px] text-sm font-bold leading-snug text-[var(--color-green-deep)]">
+            AVFU Human Resource Management System
+          </p>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
@@ -71,10 +78,6 @@ export function Sidebar({
           </div>
         ))}
       </nav>
-
-      <div className="border-t border-[var(--color-line)] px-5 py-4 text-[11px] text-[var(--color-ink-faint)]">
-        &copy; 2026 AVFU &middot; HRMS v2.0
-      </div>
     </aside>
   );
 }

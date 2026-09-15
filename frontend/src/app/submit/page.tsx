@@ -510,17 +510,6 @@ function SubmitPageContent() {
       >
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <Logo size={44} />
-          <div className="flex items-center gap-5 text-sm font-semibold">
-            <a
-              href="/organization"
-              className="text-[var(--color-ink-soft)] hover:underline"
-            >
-              View establishment hierarchy
-            </a>
-            <a href="/login" className="text-[var(--color-green)] hover:underline">
-              Staff sign in
-            </a>
-          </div>
         </div>
       </header>
 

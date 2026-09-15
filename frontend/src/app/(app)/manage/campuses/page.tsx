@@ -126,7 +126,7 @@ export default function ManageCampusesPage() {
             className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
             title="Edit"
           >
-            <Pencil size={16} />
+            <Pencil size={15} /> <span>Edit</span>
           </button>
         ) : null,
     },

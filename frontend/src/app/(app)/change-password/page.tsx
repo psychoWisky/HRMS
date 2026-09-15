@@ -7,6 +7,7 @@ import { ApiError, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/Toast";
 import { MotionCard, SectionTitle, Spinner } from "@/components/ui";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export default function ChangePasswordPage() {
   const { user, refresh } = useAuth();
@@ -72,9 +73,7 @@ export default function ChangePasswordPage() {
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="label">Current password</label>
-            <input
-              className="input"
-              type="password"
+            <PasswordInput
               autoComplete="current-password"
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
@@ -83,9 +82,7 @@ export default function ChangePasswordPage() {
           </div>
           <div>
             <label className="label">New password</label>
-            <input
-              className="input"
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
@@ -96,9 +93,7 @@ export default function ChangePasswordPage() {
           </div>
           <div>
             <label className="label">Confirm new password</label>
-            <input
-              className="input"
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}

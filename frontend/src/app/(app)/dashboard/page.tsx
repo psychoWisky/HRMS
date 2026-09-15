@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   Building2,
   ClipboardCheck,
   IdCard,
   Inbox,
-  ListTree,
   MapPin,
   Network,
   ShieldCheck,
@@ -113,6 +113,7 @@ function BreakdownCard({
 
 function AdminDashboard({ canReview }: { canReview: boolean }) {
   const { data, loading } = useApi<AdminDash>("/api/dashboard/admin");
+  const [copied, setCopied] = useState(false);
 
   if (loading) {
     return (
@@ -131,6 +132,30 @@ function AdminDashboard({ canReview }: { canReview: boolean }) {
 
   return (
     <div className="space-y-6">
+      {canReview && (
+        <div className="card flex flex-wrap items-center justify-between gap-4 border-l-4 p-5" style={{ borderLeftColor: "var(--color-green)" }}>
+          <div>
+            <p className="font-bold">New joinee submission link</p>
+            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+              Share this public URL with a new employee whenever needed.
+            </p>
+            <p className="mt-2 break-all font-mono text-sm text-[var(--color-green)]">
+              {typeof window === "undefined" ? "/submit" : `${window.location.origin}/submit`}
+            </p>
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={async () => {
+              const url = `${window.location.origin}/submit`;
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1800);
+            }}
+          >
+            {copied ? "Copied" : "Copy URL"}
+          </button>
+        </div>
+      )}
       {canReview && data.submissions_awaiting_review > 0 && (
         <Link
           href="/manage/submissions"
@@ -306,17 +331,6 @@ function LimitedDashboard() {
             </Link>
           </MotionCard>
 
-          <MotionCard>
-            <div className="mb-3 flex items-center gap-2 text-[var(--color-green)]">
-              <ListTree size={20} />
-              <h3 className="text-lg font-bold text-[var(--color-ink)]">
-                Explore AVFU
-              </h3>
-            </div>
-            <Link href="/organization" className="btn btn-ghost w-full">
-              <ListTree size={18} /> Organisation hierarchy
-            </Link>
-          </MotionCard>
         </div>
       </div>
     </div>

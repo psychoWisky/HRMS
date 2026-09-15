@@ -118,28 +118,18 @@ HR_ADMIN_PERMISSIONS = [
 # Admin: everything.
 ADMIN_PERMISSIONS = list(ALL_PERMISSION_CODES)
 
-# Department Head: HR-like operational authority, but every one of these is
-# scoped to the org unit they manage (their subtree) in the route handlers.
-# They may manage the structure and reporting *inside* their department
-# (Sections/Units/Cells, sanctioned posts, reporting links) — the handlers
-# reject anything outside their subtree — but they cannot create or edit a
-# College / Establishment / Department (``structure:manage``), nor touch
-# designations, custom fields, users/roles or system settings.
+# Department Head: read-only access to the university structure, employees and
+# reporting hierarchy, with all reads scoped to their assigned unit subtree.
+# Verification and self-service remain available for their own scope/account.
 DEPARTMENT_HEAD_PERMISSIONS = [
     DIRECTORY_READ,
     ORG_READ,
     EMPLOYEE_READ,
-    EMPLOYEE_EDIT,
     REPORT_READ,
     PROFILE_EDIT_OWN,
     PASSWORD_CHANGE_OWN,
     SUBMISSION_REVIEW,
     KYC_VERIFY,
-    ORG_CREATE,
-    ORG_EDIT,
-    ORG_DELETE,
-    POST_MANAGE,
-    REPORTING_MANAGE,
 ]
 
 # Super Admin: unrestricted, hidden.

@@ -5,17 +5,14 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
-  CheckCircle2,
-  Eye,
-  EyeOff,
   Info,
-  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/Toast";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/ui";
 import { ApiError, api } from "@/lib/api";
+import { PasswordInput } from "@/components/PasswordInput";
 
 type Mode = "login" | "forgot" | "reset";
 
@@ -25,7 +22,6 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [mode, setMode] = useState<Mode>("login");
-  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const [email, setEmail] = useState("");
@@ -93,37 +89,13 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-stretch">
       {/* Brand panel */}
       <div
-        className="relative hidden w-[44%] flex-col justify-between p-12 text-white lg:flex"
+        className="relative hidden w-[44%] flex-col items-center justify-center p-12 text-center text-white lg:flex"
         style={{ background: "var(--color-green)" }}
       >
-        <Logo light size={52} />
-        <div className="relative">
-          <h2 className="text-4xl font-bold leading-tight">
-            Human Resource
-            <br />
-            Management System
-          </h2>
-          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/85">
-            One centralised system for every campus, office, faculty,
-            directorate and research station of Assam Veterinary and Fishery
-            University.
-          </p>
-          <ul className="mt-6 space-y-2 text-white/90">
-            {[
-              "University-wide employee directory",
-              "Organisational and reporting hierarchy",
-              "Sanctioned posts and vacancies",
-              "New-employee document verification",
-            ].map((t) => (
-              <li key={t} className="flex items-center gap-2">
-                <CheckCircle2 size={18} /> {t}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="relative flex items-center gap-2 text-sm text-white/75">
-          <ShieldCheck size={18} /> Secure government-grade access
-        </div>
+        <Logo light size={204} showText={false} />
+        <p className="mt-7 max-w-sm text-xl font-bold leading-tight">
+          Human Resource Management System
+        </p>
       </div>
 
       {/* Form panel */}
@@ -169,24 +141,13 @@ export default function LoginPage() {
                 <div>
                   <label className="label">Password</label>
                   <div className="relative">
-                    <input
-                      className="input pr-12"
-                      type={show ? "text" : "password"}
-                      autoComplete="current-password"
-                      placeholder="Enter your password"
+                    <PasswordInput
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      placeholder="Enter your password"
                       required
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShow((s) => !s)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)] hover:text-[var(--color-green)]"
-                      tabIndex={-1}
-                      aria-label={show ? "Hide password" : "Show password"}
-                    >
-                      {show ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
                   </div>
                 </div>
                 <button
@@ -303,14 +264,13 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label className="label">New password</label>
-                  <input
-                    className="input"
-                    type="password"
+                  <PasswordInput
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="At least 8 characters, with a letter and a digit"
                     required
                     minLength={8}
+                    autoComplete="new-password"
                   />
                 </div>
                 <button

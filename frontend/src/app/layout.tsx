@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   title: "AVFU HRMS — Assam Veterinary & Fisheries University",
   description:
     "Human Resource Management System for Assam Veterinary & Fisheries University",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

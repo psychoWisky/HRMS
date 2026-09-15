@@ -198,9 +198,10 @@ def employee_dashboard(
 # ---------------------------------------------------------------------------
 # Fixed reports (existing) — now exportable as Excel, never CSV
 # ---------------------------------------------------------------------------
-def _build_fixed_report(db: Session, report: str, limit: int) -> dict:
+def _build_fixed_report(db: Session, user: User, report: str, limit: int) -> dict:
+    scope = department_scope_ids(db, user)
     if report == "employees-by-organization":
-        rows = (
+        query = (
             db.query(
                 OrgUnit.name,
                 OrgUnit.kind,
@@ -211,9 +212,10 @@ def _build_fixed_report(db: Session, report: str, limit: int) -> dict:
             .outerjoin(Location, OrgUnit.location_id == Location.id)
             .group_by(OrgUnit.id, Location.name)
             .order_by(func.count(Employee.id).desc())
-            .limit(limit)
-            .all()
         )
+        if scope is not None:
+            query = query.filter(OrgUnit.id.in_(scope))
+        rows = query.limit(limit).all()
         return {
             "title": "Employees by establishment/department",
             "columns": ["Office", "Kind", "Campus", "Employees"],
@@ -227,9 +229,10 @@ def _build_fixed_report(db: Session, report: str, limit: int) -> dict:
             .filter(Post.is_active.is_(True))
             .join(Designation, Post.designation_id == Designation.id)
             .order_by(Designation.rank_level)
-            .limit(limit)
-            .all()
         )
+        if scope is not None:
+            posts = posts.filter(Post.org_unit_id.in_(scope))
+        posts = posts.limit(limit).all()
         return {
             "title": "Sanctioned posts and vacancies",
             "columns": [
@@ -254,7 +257,7 @@ def _build_fixed_report(db: Session, report: str, limit: int) -> dict:
         }
 
     if report == "kyc-status":
-        rows = (
+        query = (
             db.query(
                 Employee.hrms_employee_id,
                 Employee.full_name,
@@ -266,9 +269,10 @@ def _build_fixed_report(db: Session, report: str, limit: int) -> dict:
             .join(KYC, KYC.employee_id == Employee.id)
             .outerjoin(OrgUnit, Employee.org_unit_id == OrgUnit.id)
             .order_by(Employee.full_name)
-            .limit(limit)
-            .all()
         )
+        if scope is not None:
+            query = query.filter(Employee.org_unit_id.in_(scope))
+        rows = query.limit(limit).all()
         return {
             "title": "KYC / document status",
             "columns": [
@@ -293,13 +297,15 @@ def _build_fixed_report(db: Session, report: str, limit: int) -> dict:
         }
 
     if report == "employees-by-campus":
-        rows = (
+        query = (
             db.query(Location.name, func.count(Employee.id))
             .outerjoin(Employee, Employee.location_id == Location.id)
             .group_by(Location.id)
             .order_by(func.count(Employee.id).desc())
-            .all()
         )
+        if scope is not None:
+            query = query.filter(Employee.org_unit_id.in_(scope))
+        rows = query.all()
         return {
             "title": "Employees by campus",
             "columns": ["Campus / Location", "Employees"],
@@ -307,12 +313,13 @@ def _build_fixed_report(db: Session, report: str, limit: int) -> dict:
         }
 
     if report == "reporting-hierarchy":
-        rows = (
+        query = (
             db.query(ReportingRelationship)
             .filter(ReportingRelationship.effective_to.is_(None))
-            .limit(limit)
-            .all()
         )
+        if scope is not None:
+            query = query.join(Employee, Employee.id == ReportingRelationship.employee_id).filter(Employee.org_unit_id.in_(scope))
+        rows = query.limit(limit).all()
         return {
             "title": "Reporting hierarchy",
             "columns": ["Employee", "Designation", "Reports to", "Type", "Primary"],
@@ -341,7 +348,7 @@ def report(
     user: User = Depends(require_perm(REPORT_READ)),
 ):
     """Tabular reports. Each returns {columns, rows} ready for display or export."""
-    return _build_fixed_report(db, report, limit)
+    return _build_fixed_report(db, user, report, limit)
 
 
 @router.get("/reports/{report}/export")
@@ -351,7 +358,7 @@ def export_fixed_report(
     db: Session = Depends(get_db),
     user: User = Depends(require_perm(REPORT_READ)),
 ):
-    data = _build_fixed_report(db, report, limit)
+    data = _build_fixed_report(db, user, report, limit)
     return xlsx_response(data["title"], data["columns"], data["rows"], report)
 
 

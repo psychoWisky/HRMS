@@ -174,7 +174,7 @@ export default function CustomFieldsPage() {
           className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-2)]"
           title={r.is_active ? "Deactivate" : "Reactivate"}
         >
-          <Power size={16} />
+          <Power size={15} /> <span>{r.is_active ? "Deactivate" : "Reactivate"}</span>
         </button>
       ),
     },
@@ -210,7 +210,7 @@ export default function CustomFieldsPage() {
           className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-2)]"
           title={r.is_active ? "Deactivate" : "Reactivate"}
         >
-          <Power size={16} />
+          <Power size={15} /> <span>{r.is_active ? "Deactivate" : "Reactivate"}</span>
         </button>
       ),
     },

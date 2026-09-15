@@ -41,7 +41,7 @@ from app.schemas.schemas import (
     KYCOut,
 )
 from app.services import storage
-from app.services.org import org_path
+from app.services.org import department_scope_ids, org_path
 
 router = APIRouter(prefix="/api/kyc", tags=["KYC"])
 
@@ -59,10 +59,13 @@ DECIDABLE = {
 }
 
 
-def _get(db: Session, kyc_id: int) -> KYC:
+def _get(db: Session, kyc_id: int, user: User) -> KYC:
     record = db.get(KYC, kyc_id)
     if record is None:
         raise HTTPException(status_code=404, detail="KYC record not found")
+    scope = department_scope_ids(db, user)
+    if scope is not None and (record.employee is None or record.employee.org_unit_id not in scope):
+        raise HTTPException(status_code=403, detail="This employee is outside the department you manage")
     return record
 
 
@@ -147,6 +150,9 @@ def list_kyc(
     user: User = Depends(require_perm(KYC_VERIFY)),
 ):
     query = db.query(KYC).join(Employee, KYC.employee_id == Employee.id)
+    scope = department_scope_ids(db, user)
+    if scope is not None:
+        query = query.filter(Employee.org_unit_id.in_(scope))
     if kyc_status is not None:
         query = query.filter(KYC.status == kyc_status)
     if q:
@@ -167,8 +173,11 @@ def kyc_for_employee(
     user: User = Depends(require_perm(KYC_VERIFY)),
 ):
     record = db.query(KYC).filter(KYC.employee_id == employee_id).first()
+    scope = department_scope_ids(db, user)
+    employee = db.get(Employee, employee_id)
+    if scope is not None and (employee is None or employee.org_unit_id not in scope):
+        raise HTTPException(status_code=403, detail="This employee is outside the department you manage")
     if record is None:
-        employee = db.get(Employee, employee_id)
         if employee is None:
             raise HTTPException(status_code=404, detail="Employee not found")
         record = KYC(employee_id=employee_id, status=KYCStatus.not_started)
@@ -184,7 +193,7 @@ def get_kyc(
     db: Session = Depends(get_db),
     user: User = Depends(require_perm(KYC_VERIFY)),
 ):
-    return _kyc_out(db, _get(db, kyc_id))
+    return _kyc_out(db, _get(db, kyc_id, user))
 
 
 @router.put("/{kyc_id}", response_model=KYCOut)
@@ -196,7 +205,7 @@ def update_kyc(
     user: User = Depends(require_perm(KYC_VERIFY)),
 ):
     """HR maintains the record on the employee's behalf."""
-    record = _get(db, kyc_id)
+    record = _get(db, kyc_id, user)
     changes = payload.model_dump(exclude_unset=True)
     before = {k: getattr(record, k) for k in changes}
     for key, value in changes.items():
@@ -235,7 +244,7 @@ def upload_document(
     db: Session = Depends(get_db),
     user: User = Depends(require_perm(KYC_VERIFY)),
 ):
-    record = _get(db, kyc_id)
+    record = _get(db, kyc_id, user)
     stored_name, contents = storage.save_upload(SCOPE, record.id, file)
     doc = KYCDocument(
         kyc_id=record.id,
@@ -320,7 +329,7 @@ def _decide(
     action: str,
     remark: str,
 ) -> KYCOut:
-    record = _get(db, kyc_id)
+    record = _get(db, kyc_id, user)
     if record.status == to_status:
         raise HTTPException(
             status_code=400, detail=f"This record is already '{to_status.value}'"
@@ -374,7 +383,7 @@ def approve_kyc(
     user: User = Depends(require_perm(KYC_VERIFY)),
 ):
     """Manual approval — there is no automatic path to this state."""
-    record = _get(db, kyc_id)
+    record = _get(db, kyc_id, user)
     if not record.documents:
         raise HTTPException(
             status_code=400,

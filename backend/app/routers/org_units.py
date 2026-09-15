@@ -84,13 +84,21 @@ def list_locations(
     query = db.query(Location)
     if not include_inactive:
         query = query.filter(Location.is_active.is_(True))
+    scope = department_scope_ids(db, user)
+    scoped_employee_query = db.query(Employee).filter(Employee.is_active.is_(True))
+    if scope is not None:
+        scoped_employee_query = scoped_employee_query.filter(Employee.org_unit_id.in_(scope))
     rows = (
-        db.query(Employee.location_id, func.count(Employee.id))
-        .filter(Employee.is_active.is_(True))
+        scoped_employee_query.with_entities(Employee.location_id, func.count(Employee.id))
         .group_by(Employee.location_id)
         .all()
     )
     counts = {loc_id: count for loc_id, count in rows}
+    if scope is not None:
+        allowed_location_ids = {
+            location_id for location_id, _count in rows if location_id is not None
+        }
+        query = query.filter(Location.id.in_(allowed_location_ids))
     return [
         LocationOut(
             **{
@@ -200,6 +208,9 @@ def org_unit_tree(
     query = db.query(OrgUnit)
     if not include_inactive:
         query = query.filter(OrgUnit.is_active.is_(True))
+    scope = department_scope_ids(db, user)
+    if scope is not None:
+        query = query.filter(OrgUnit.id.in_(scope))
     units = query.order_by(OrgUnit.sort_order, OrgUnit.name).all()
 
     emp_direct = employee_counts_by_unit(db)
@@ -251,6 +262,7 @@ def get_org_unit(
     unit = db.get(OrgUnit, unit_id)
     if unit is None:
         raise HTTPException(status_code=404, detail="Org unit not found")
+    assert_unit_in_scope(db, user, unit_id)
 
     emp_counts = employee_counts_by_unit(db)
     sanc_counts = sanctioned_counts_by_unit(db)

@@ -21,9 +21,8 @@ function Box({
 }) {
   return (
     <div
-      className={`rounded-md border bg-[var(--color-surface)] px-3 py-2 text-center text-[13px] leading-tight ${
-        bold ? "font-bold" : "font-medium"
-      } ${wide ? "min-w-[200px]" : "min-w-[150px]"}`}
+      className={`rounded-md border bg-[var(--color-surface)] px-3 py-2 text-center text-[13px] leading-tight ${bold ? "font-bold" : "font-medium"
+        } ${wide ? "min-w-[200px]" : "min-w-[150px]"}`}
       style={{ borderColor: "var(--color-line-strong)" }}
     >
       {children}
@@ -131,11 +130,6 @@ export function UniversityOrganogram() {
           </div>
         </div>
       </div>
-
-      <p className="mt-5 text-center text-xs text-[var(--color-ink-faint)]">
-        Statutory university organogram — fixed. The editable establishment /
-        department / section structure is shown below.
-      </p>
     </div>
   );
 }

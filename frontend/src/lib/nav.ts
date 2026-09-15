@@ -4,7 +4,6 @@ import {
   Inbox,
   KeyRound,
   LayoutDashboard,
-  ListTree,
   MapPin,
   Network,
   ScrollText,
@@ -41,12 +40,6 @@ export const NAV: NavGroup[] = [
         icon: Users,
         anyOf: [P.directoryRead],
       },
-      {
-        label: "Establishment Hierarchy",
-        href: "/organization",
-        icon: ListTree,
-        anyOf: [P.orgRead],
-      },
     ],
   },
   {
@@ -79,13 +72,13 @@ export const NAV: NavGroup[] = [
         label: "Organisation Structure",
         href: "/manage/org-units",
         icon: Building2,
-        anyOf: [P.structureManage, P.orgEdit, P.orgCreate],
+        anyOf: [P.orgRead, P.structureManage, P.orgEdit, P.orgCreate],
       },
       {
         label: "Campuses",
         href: "/manage/campuses",
         icon: MapPin,
-        anyOf: [P.orgCreate, P.orgEdit],
+        anyOf: [P.orgRead, P.orgCreate, P.orgEdit],
       },
       {
         label: "Designations",
@@ -97,7 +90,7 @@ export const NAV: NavGroup[] = [
         label: "Reporting Hierarchy",
         href: "/manage/reporting",
         icon: Network,
-        anyOf: [P.reportingManage],
+        anyOf: [P.orgRead, P.reportingManage],
       },
       {
         label: "Custom Fields",
@@ -144,9 +137,23 @@ export const NAV: NavGroup[] = [
   },
 ];
 
-export function navForPermissions(permissions: string[]): NavGroup[] {
+export function navForPermissions(
+  permissions: string[],
+  role?: string
+): NavGroup[] {
   const has = (codes: string[]) =>
     codes.length === 0 || codes.some((c) => permissions.includes(c));
-  return NAV.map((g) => ({ ...g, items: g.items.filter((i) => has(i.anyOf)) }))
+  const hiddenForDepartmentHead = new Set([
+    "/manage/org-units",
+    "/manage/campuses",
+  ]);
+  return NAV.map((g) => ({
+    ...g,
+    items: g.items.filter(
+      (i) =>
+        has(i.anyOf) &&
+        !(role === "department_head" && hiddenForDepartmentHead.has(i.href))
+    ),
+  }))
     .filter((g) => g.items.length > 0);
 }

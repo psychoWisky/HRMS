@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
-import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/ui";
 
-// Pages that stay readable without signing in — currently just the
-// organisation hierarchy, per the requirement that anyone can see the
-// university's structure without an account.
-const PUBLIC_PATHS = new Set(["/organization"]);
+const PUBLIC_PATHS = new Set<string>();
+const DEPARTMENT_HEAD_BLOCKED_PATHS = [
+  "/manage/org-units",
+  "/manage/campuses",
+];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -31,6 +30,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Initial/temporary credentials must be replaced before anything else.
     if (user.must_change_password && pathname !== "/change-password") {
       router.replace("/change-password");
+      return;
+    }
+    if (
+      user.role === "department_head" &&
+      DEPARTMENT_HEAD_BLOCKED_PATHS.some(
+        (path) => pathname === path || pathname.startsWith(`${path}/`)
+      )
+    ) {
+      router.replace("/dashboard");
     }
   }, [user, loading, router, pathname, isPublicPath]);
 
@@ -42,26 +50,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Anonymous visitor on a public page: a light standalone header instead
-  // of the Sidebar/Topbar — there is nothing behind either for them to use.
-  if (!user) {
+  if (!user) return null;
+
+  const departmentHeadBlocked =
+    user.role === "department_head" &&
+    DEPARTMENT_HEAD_BLOCKED_PATHS.some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`)
+    );
+  if (departmentHeadBlocked) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg)]">
-        <header
-          className="flex items-center justify-between gap-4 border-b px-5 py-4 sm:px-8"
-          style={{ background: "#fff", borderColor: "var(--color-line)" }}
-        >
-          <Logo size={44} />
-          <Link
-            href="/login"
-            className="text-sm font-semibold text-[var(--color-green)] hover:underline"
-          >
-            Staff sign in
-          </Link>
-        </header>
-        <main className="px-5 py-7 sm:px-8">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
-        </main>
+      <div className="flex min-h-screen items-center justify-center text-[var(--color-green)]">
+        <Spinner size={32} />
       </div>
     );
   }
@@ -69,7 +68,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <div className="hidden lg:block">
-        <Sidebar permissions={user.permissions} />
+        <Sidebar permissions={user.permissions} role={user.role} />
       </div>
 
       <AnimatePresence>
@@ -91,6 +90,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             >
               <Sidebar
                 permissions={user.permissions}
+                role={user.role}
                 onNavigate={() => setMobileOpen(false)}
               />
             </motion.div>

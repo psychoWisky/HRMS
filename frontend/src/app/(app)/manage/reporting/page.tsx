@@ -11,6 +11,7 @@ import { Modal } from "@/components/Modal";
 import { Column, DataTable } from "@/components/DataTable";
 import { titleize } from "@/lib/format";
 import { Empty, SectionTitle, Spinner } from "@/components/ui";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface EmployeeRow {
   id: number;
@@ -196,7 +197,7 @@ export default function ManageReportingPage() {
                         title="Remove"
                         disabled={busy}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} /> <span>Remove</span>
                       </button>
                     </li>
                   ))}
@@ -209,21 +210,18 @@ export default function ManageReportingPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <label className="label">Reports to</label>
-                  <select
-                    className="input"
+                  <SearchableSelect
                     value={managerId}
-                    onChange={(e) => setManagerId(e.target.value)}
-                  >
-                    <option value="">Select an employee…</option>
-                    {(everyone ?? [])
+                    onChange={setManagerId}
+                    placeholder="Select an employee..."
+                    searchPlaceholder="Search employees..."
+                    options={(everyone ?? [])
                       .filter((e) => e.id !== target.id)
-                      .map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.full_name}
-                          {e.designation ? ` — ${e.designation}` : ""}
-                        </option>
-                      ))}
-                  </select>
+                      .map((e) => ({
+                        value: String(e.id),
+                        label: `${e.full_name}${e.designation ? ` - ${e.designation}` : ""}`,
+                      }))}
+                  />
                 </div>
                 <div>
                   <label className="label">Relationship type</label>

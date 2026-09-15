@@ -83,8 +83,7 @@ export default function ManageOrgUnitsPage() {
 
   const canStructure = can(P.structureManage);
   const canSection = can(P.orgCreate) || can(P.orgEdit);
-  const canManage = (kind: string) =>
-    kind === "section" ? canSection : canStructure;
+  const canManage = (kind: string) => kind === "section" ? canSection : canStructure;
 
   const rows = data ?? [];
   const parentOptions = useMemo(
@@ -250,14 +249,14 @@ export default function ManageOrgUnitsPage() {
               className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
               title="Edit"
             >
-              <Pencil size={16} />
+              <Pencil size={15} /> <span>Edit</span>
             </button>
             <button
               onClick={() => toggleActive(r)}
               className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-danger)] hover:bg-[#fbf0f0]"
               title={r.is_active ? "Deactivate" : "Reactivate"}
             >
-              <Power size={16} />
+              <Power size={15} /> <span>{r.is_active ? "Deactivate" : "Reactivate"}</span>
             </button>
           </div>
         ) : null,

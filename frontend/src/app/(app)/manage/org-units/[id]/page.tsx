@@ -213,7 +213,7 @@ export default function OfficePage({
                         className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-danger)] hover:bg-[#fbf0f0]"
                         title="Deactivate"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={14} /> <span>Deactivate</span>
                       </button>
                     </td>
                   )}

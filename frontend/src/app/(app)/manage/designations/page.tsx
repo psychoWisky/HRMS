@@ -166,7 +166,7 @@ export default function ManageDesignationsPage() {
               className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
               title="Edit"
             >
-              <Pencil size={16} />
+              <Pencil size={15} /> <span>Edit</span>
             </button>
             {r.is_active && (
               <button
@@ -174,7 +174,7 @@ export default function ManageDesignationsPage() {
                 className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-danger)] hover:bg-[#fbf0f0]"
                 title="Deactivate"
               >
-                <Power size={16} />
+                <Power size={15} /> <span>Deactivate</span>
               </button>
             )}
           </div>

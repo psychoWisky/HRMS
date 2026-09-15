@@ -221,7 +221,7 @@ export default function ManageUsersPage() {
             className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
             title="Reset password"
           >
-            <KeyRound size={16} />
+            <KeyRound size={15} /> <span>Reset password</span>
           </button>
           <button
             onClick={() => toggleActive(r)}
@@ -229,7 +229,7 @@ export default function ManageUsersPage() {
             title={r.is_active ? "Deactivate" : "Activate"}
             disabled={r.id === me?.id}
           >
-            <Power size={16} />
+            <Power size={15} /> <span>{r.is_active ? "Deactivate" : "Activate"}</span>
           </button>
         </div>
       ),

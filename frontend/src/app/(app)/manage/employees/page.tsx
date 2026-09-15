@@ -29,6 +29,7 @@ import {
   Spinner,
   StatusBadge,
 } from "@/components/ui";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface EmployeeRow {
   id: number;
@@ -282,7 +283,7 @@ export default function ManageEmployeesPage() {
                 className="absolute -bottom-1 -right-1 rounded-full border border-[var(--color-line)] bg-white p-1 text-[var(--color-green)] shadow-sm"
                 title="Update photo"
               >
-                <Camera size={11} />
+                <Camera size={11} /> <span className="text-[10px]">Photo</span>
               </button>
             )}
           </div>
@@ -338,7 +339,7 @@ export default function ManageEmployeesPage() {
     {
       header: "Actions",
       cell: (r) => (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex max-w-[min(56rem,calc(100vw-3rem))] flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap pb-0.5">
           {canEdit && (
             <button
               onClick={() => {
@@ -353,10 +354,10 @@ export default function ManageEmployeesPage() {
                   pay_scale: r.pay_scale ?? "",
                 });
               }}
-              className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--color-line)] px-2 py-1 text-xs text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
               title="Edit"
             >
-              <Pencil size={16} />
+              <Pencil size={15} /> <span>Edit</span>
             </button>
           )}
           {canPromote && (
@@ -365,35 +366,35 @@ export default function ManageEmployeesPage() {
                 setPromoting(r);
                 setPromoteForm({ ...PROMOTE_BLANK });
               }}
-              className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--color-line)] px-2 py-1 text-xs text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
               title="Promote"
             >
-              <TrendingUp size={16} />
+              <TrendingUp size={15} /> <span>Promote</span>
             </button>
           )}
           <button
             onClick={() => setHistoryFor(r)}
-            className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-2)]"
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--color-line)] px-2 py-1 text-xs text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-2)]"
             title="View history / timeline"
           >
-            <History size={16} />
+            <History size={15} /> <span>History</span>
           </button>
           {canReset && (
             <button
               onClick={() => issueCredentials(r)}
-              className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--color-line)] px-2 py-1 text-xs text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
               title="Issue / reset credentials"
             >
-              <KeyRound size={16} />
+              <KeyRound size={15} /> <span>Credentials</span>
             </button>
           )}
           {canDeactivate && (
             <button
               onClick={() => toggleActive(r)}
-              className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-danger)] hover:bg-[#fbf0f0]"
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--color-line)] px-2 py-1 text-xs text-[var(--color-danger)] hover:bg-[#fbf0f0]"
               title={r.is_active ? "Deactivate" : "Activate"}
             >
-              <Power size={16} />
+              <Power size={15} /> <span>{r.is_active ? "Deactivate" : "Activate"}</span>
             </button>
           )}
         </div>
@@ -444,18 +445,13 @@ export default function ManageEmployeesPage() {
       </div>
       <div>
         <label className="label">Designation</label>
-        <select
-          className="input"
+        <SearchableSelect
           value={form.designation_id}
-          onChange={(e) => setForm({ ...form, designation_id: e.target.value })}
-        >
-          <option value="">Not assigned</option>
-          {(designations ?? []).map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setForm({ ...form, designation_id: value })}
+          placeholder="Not assigned"
+          searchPlaceholder="Search designations..."
+          options={(designations ?? []).map((d) => ({ value: String(d.id), label: d.name }))}
+        />
       </div>
       <div>
         <label className="label">Pay Scale</label>
@@ -470,30 +466,26 @@ export default function ManageEmployeesPage() {
         <>
           <div>
             <label className="label">Campus / Location</label>
-            <select
-              className="input"
+            <SearchableSelect
               value={form.location_id}
-              onChange={(e) => setForm({ ...form, location_id: e.target.value })}
-            >
-              <option value="">Not assigned</option>
-              {(locations ?? []).map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setForm({ ...form, location_id: value })}
+              placeholder="Not assigned"
+              searchPlaceholder="Search campuses..."
+              options={(locations ?? []).map((l) => ({ value: String(l.id), label: l.name }))}
+            />
           </div>
           <div>
             <label className="label">Role</label>
-            <select
-              className="input"
+            <SearchableSelect
               value={form.role_code}
-              onChange={(e) => setForm({ ...form, role_code: e.target.value })}
-            >
-              <option value="hr_admin">HR</option>
-              <option value="admin">Administrator</option>
-              <option value="department_head">Department Head</option>
-            </select>
+              onChange={(value) => setForm({ ...form, role_code: value })}
+              searchPlaceholder="Search roles..."
+              options={[
+                { value: "hr_admin", label: "HR" },
+                { value: "admin", label: "Administrator" },
+                { value: "department_head", label: "Department Head" },
+              ]}
+            />
             <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
               Ordinary employees have no login. Assign the department a
               Department Head manages afterwards, from Users &amp; Roles.
