@@ -21,6 +21,13 @@ frontend/out/
 frontend/.env.local
 frontend/.env*.local
 
+# Database Dumps / Production Dumps
+*.sql
+*.dump
+*.sql.gz
+*.tar.gz
+backend/dumps/
+
 # OS
 Thumbs.db
 .DS_Store
