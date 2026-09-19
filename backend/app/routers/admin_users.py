@@ -25,34 +25,38 @@ from app.schemas.schemas import (
     AuditLogOut,
     CredentialIssued,
     PermissionOut,
+    PersonOut,
+    PersonRoleUpdate,
     RoleCreate,
     RoleOut,
     RoleUpdate,
     UserActiveUpdate,
-    UserOut,
-    UserRoleUpdate,
     UserScopeUpdate,
 )
 
 router = APIRouter(prefix="/api/admin", tags=["Users, Roles & System"])
 
 
-def _user_out(db: Session, user: User) -> UserOut:
-    emp = db.query(Employee).filter(Employee.user_id == user.id).first()
-    return UserOut(
-        id=user.id,
-        email=user.email,
-        role_code=user.role.code if user.role else "",
-        role_name=user.role.name if user.role else "",
-        is_active=user.is_active,
-        must_change_password=user.must_change_password,
-        last_login_at=user.last_login_at,
-        created_at=user.created_at,
-        employee_id=emp.id if emp else None,
-        employee_name=emp.full_name if emp else None,
-        hrms_employee_id=emp.hrms_employee_id if emp else None,
-        managed_org_unit_id=user.managed_org_unit_id,
-        managed_org_unit_name=user.managed_org_unit.name if user.managed_org_unit else None,
+def _person_out(emp: Employee) -> PersonOut:
+    user = emp.user
+    return PersonOut(
+        employee_id=emp.id,
+        employee_name=emp.full_name,
+        hrms_employee_id=emp.hrms_employee_id,
+        designation=emp.designation.name if emp.designation else None,
+        organization=emp.org_unit.name if emp.org_unit else None,
+        has_login=user is not None,
+        user_id=user.id if user else None,
+        login_email=user.email if user else None,
+        role_code=user.role.code if user and user.role else "",
+        role_name=user.role.name if user and user.role else "",
+        is_active=user.is_active if user else True,
+        must_change_password=user.must_change_password if user else False,
+        last_login_at=user.last_login_at if user else None,
+        managed_org_unit_id=user.managed_org_unit_id if user else None,
+        managed_org_unit_name=(
+            user.managed_org_unit.name if user and user.managed_org_unit else None
+        ),
     )
 
 
@@ -74,7 +78,7 @@ def _role_out(db: Session, role: Role) -> RoleOut:
 # ---------------------------------------------------------------------------
 # Users
 # ---------------------------------------------------------------------------
-@router.get("/users", response_model=list[UserOut])
+@router.get("/users", response_model=list[PersonOut])
 def list_users(
     q: str = "",
     role_code: str | None = None,
@@ -82,61 +86,120 @@ def list_users(
     db: Session = Depends(get_db),
     actor: User = Depends(require_perm(USER_MANAGE)),
 ):
-    query = db.query(User)
+    """Every employee — Admin/HR decide who gets what access from here.
+
+    Someone with no login yet still appears, with ``has_login=false``;
+    assigning them a role (``PUT /users/{employee_id}/role``) creates one.
+    """
+    query = db.query(Employee).filter(Employee.is_active.is_(True))
     if q:
-        query = query.filter(User.email.ilike(f"%{q.strip()}%"))
+        term = f"%{q.strip()}%"
+        query = query.outerjoin(User, Employee.user_id == User.id).filter(
+            Employee.full_name.ilike(term)
+            | Employee.hrms_employee_id.ilike(term)
+            | User.email.ilike(term)
+        )
     if role_code:
-        query = query.join(Role).filter(Role.code == role_code)
+        query = query.join(User, Employee.user_id == User.id).join(Role).filter(
+            Role.code == role_code
+        )
     if not include_inactive:
-        query = query.filter(User.is_active.is_(True))
-    return [_user_out(db, u) for u in query.order_by(User.email).all()]
+        query = query.outerjoin(User, Employee.user_id == User.id).filter(
+            (Employee.user_id.is_(None)) | (User.is_active.is_(True))
+        )
+    employees = query.order_by(Employee.full_name).all()
+    return [_person_out(e) for e in employees]
 
 
-@router.put("/users/{user_id}/role", response_model=UserOut)
+@router.put("/users/{employee_id}/role", response_model=PersonOut)
 def change_user_role(
-    user_id: int,
-    payload: UserRoleUpdate,
+    employee_id: int,
+    payload: PersonRoleUpdate,
     request: Request,
     db: Session = Depends(get_db),
     actor: User = Depends(require_perm(USER_MANAGE)),
 ):
-    target = db.get(User, user_id)
-    if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    """Assign a role to any employee, creating their login if they don't
+    have one yet. Admin/HR decide who gets HR, Department Head or Admin
+    access — nobody needs to already have a login for this to work."""
+    emp = db.get(Employee, employee_id)
+    if emp is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
     role = db.query(Role).filter(Role.code == payload.role_code).first()
     if role is None:
         raise HTTPException(status_code=400, detail="Unknown role")
-    if target.id == actor.id and role.code != actor.role.code:
-        raise HTTPException(
-            status_code=400, detail="You cannot change your own role"
+
+    target = emp.user
+    if target is not None and target.id == actor.id and role.code != actor.role.code:
+        raise HTTPException(status_code=400, detail="You cannot change your own role")
+
+    previous = target.role.code if target and target.role else ""
+
+    if target is None:
+        email = (payload.login_email or emp.official_email or "").strip().lower()
+        if not email:
+            raise HTTPException(
+                status_code=400,
+                detail="A login email is required to give this employee a role "
+                "(their official email is blank)",
+            )
+        if db.query(User).filter(User.email == email).first():
+            raise HTTPException(
+                status_code=409, detail="That login email is already registered"
+            )
+        target = User(
+            email=email,
+            hashed_password=hash_password(generate_temporary_password()),
+            role_id=role.id,
+            must_change_password=True,
+            created_by_id=actor.id,
         )
-    previous = target.role.code if target.role else ""
-    target.role_id = role.id
+        db.add(target)
+        db.flush()
+        emp.user_id = target.id
+    else:
+        target.role_id = role.id
+
+    if role.code != "department_head":
+        # Never leave a stale managed-department assignment on an account
+        # that is no longer a Department Head.
+        target.managed_org_unit_id = None
+
     audit.log(
         db,
         actor,
         "user.role_change",
         entity_type="user",
         entity_id=target.id,
-        summary=f"Changed role of {target.email}: {previous} -> {role.code}",
+        summary=f"Changed role of {emp.full_name} ({target.email}): {previous or 'none'} -> {role.code}",
         ip=client_ip(request),
     )
     db.commit()
-    db.refresh(target)
-    return _user_out(db, target)
+    db.refresh(emp)
+    out = _person_out(emp)
+    if role.code == "department_head" and not target.managed_org_unit_id:
+        # Deny-by-default until a department is assigned (see
+        # app.services.org.department_scope_ids) — flag it back to the
+        # caller so the UI can prompt for it immediately, rather than
+        # leaving a silently-unscoped account.
+        out.needs_department_assignment = True
+    return out
 
 
-@router.put("/users/{user_id}/activation", response_model=UserOut)
+@router.put("/users/{employee_id}/activation", response_model=PersonOut)
 def set_user_active(
-    user_id: int,
+    employee_id: int,
     payload: UserActiveUpdate,
     request: Request,
     db: Session = Depends(get_db),
     actor: User = Depends(require_perm(USER_MANAGE)),
 ):
-    target = db.get(User, user_id)
+    emp = db.get(Employee, employee_id)
+    if emp is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    target = emp.user
     if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=400, detail="This employee has no login to activate/deactivate")
     if target.id == actor.id and not payload.is_active:
         raise HTTPException(
             status_code=400, detail="You cannot deactivate your own account"
@@ -152,13 +215,13 @@ def set_user_active(
         ip=client_ip(request),
     )
     db.commit()
-    db.refresh(target)
-    return _user_out(db, target)
+    db.refresh(emp)
+    return _person_out(emp)
 
 
-@router.post("/users/{user_id}/reset-password", response_model=CredentialIssued)
+@router.post("/users/{employee_id}/reset-password", response_model=CredentialIssued)
 def admin_reset_password(
-    user_id: int,
+    employee_id: int,
     request: Request,
     db: Session = Depends(get_db),
     actor: User = Depends(require_perm(USER_RESET_PASSWORD)),
@@ -167,9 +230,12 @@ def admin_reset_password(
 
     The existing password is never readable — it is overwritten, not revealed.
     """
-    target = db.get(User, user_id)
+    emp = db.get(Employee, employee_id)
+    if emp is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    target = emp.user
     if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=400, detail="This employee has no login yet")
 
     temp_password = generate_temporary_password()
     target.hashed_password = hash_password(temp_password)
@@ -177,7 +243,6 @@ def admin_reset_password(
     target.reset_token_hash = ""
     target.reset_token_expires_at = None
 
-    emp = db.query(Employee).filter(Employee.user_id == target.id).first()
     audit.log(
         db,
         actor,
@@ -190,8 +255,8 @@ def admin_reset_password(
     db.commit()
 
     return CredentialIssued(
-        employee_id=emp.id if emp else 0,
-        hrms_employee_id=emp.hrms_employee_id if emp else "",
+        employee_id=emp.id,
+        hrms_employee_id=emp.hrms_employee_id,
         login_email=target.email,
         temporary_password=temp_password,
     )
@@ -224,18 +289,21 @@ def list_roles(
     return [_role_out(db, r) for r in rows]
 
 
-@router.put("/users/{user_id}/scope", response_model=UserOut)
+@router.put("/users/{employee_id}/scope", response_model=PersonOut)
 def set_user_scope(
-    user_id: int,
+    employee_id: int,
     payload: UserScopeUpdate,
     request: Request,
     db: Session = Depends(get_db),
     actor: User = Depends(require_perm(USER_MANAGE)),
 ):
     """Assign the one department a Department Head account may manage."""
-    target = db.get(User, user_id)
+    emp = db.get(Employee, employee_id)
+    if emp is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    target = emp.user
     if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=400, detail="This employee has no login yet")
     if payload.managed_org_unit_id is not None and db.get(
         OrgUnit, payload.managed_org_unit_id
     ) is None:
@@ -253,8 +321,8 @@ def set_user_scope(
         ip=client_ip(request),
     )
     db.commit()
-    db.refresh(target)
-    return _user_out(db, target)
+    db.refresh(emp)
+    return _person_out(emp)
 
 
 @router.post("/roles", response_model=RoleOut, status_code=status.HTTP_201_CREATED)

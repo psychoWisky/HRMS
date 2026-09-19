@@ -83,10 +83,15 @@ export default function ManageDesignationsPage() {
     }
   }
 
-  async function deactivate(row: Designation) {
+  async function toggleActive(row: Designation) {
     try {
-      await api.del(`/api/designations/${row.id}`);
-      push("success", `${row.name} deactivated`);
+      if (row.is_active) {
+        await api.del(`/api/designations/${row.id}`);
+        push("success", `${row.name} deactivated`);
+      } else {
+        await api.put(`/api/designations/${row.id}`, { is_active: true });
+        push("success", `${row.name} reactivated`);
+      }
       reload();
     } catch (err) {
       push("error", err instanceof ApiError ? err.message : "Action failed");
@@ -168,15 +173,18 @@ export default function ManageDesignationsPage() {
             >
               <Pencil size={15} /> <span>Edit</span>
             </button>
-            {r.is_active && (
-              <button
-                onClick={() => deactivate(r)}
-                className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-danger)] hover:bg-[#fbf0f0]"
-                title="Deactivate"
-              >
-                <Power size={15} /> <span>Deactivate</span>
-              </button>
-            )}
+            <button
+              onClick={() => toggleActive(r)}
+              className={
+                r.is_active
+                  ? "rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-danger)] hover:bg-[#fbf0f0]"
+                  : "rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-2)]"
+              }
+              title={r.is_active ? "Deactivate" : "Reactivate"}
+            >
+              <Power size={15} />{" "}
+              <span>{r.is_active ? "Deactivate" : "Reactivate"}</span>
+            </button>
           </div>
         ) : null,
     },

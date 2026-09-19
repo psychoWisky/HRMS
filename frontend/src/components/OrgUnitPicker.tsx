@@ -39,6 +39,7 @@ export function OrgUnitPicker({
     [units]
   );
 
+  const [universityId, setUniversityId] = useState("");
   const [collegeId, setCollegeId] = useState("");
   const [establishmentId, setEstablishmentId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -47,6 +48,7 @@ export function OrgUnitPicker({
   // Hydrate the cascade from an incoming `value`.
   useEffect(() => {
     if (!value || units.length === 0) {
+      setUniversityId("");
       setCollegeId("");
       setEstablishmentId("");
       setDepartmentId("");
@@ -55,6 +57,7 @@ export function OrgUnitPicker({
     }
     // Walk up from the selected unit collecting each level.
     let cur: Unit | undefined = byId.get(value);
+    let university = "";
     let college = "";
     let establishment = "";
     let department = "";
@@ -62,32 +65,46 @@ export function OrgUnitPicker({
     const guard = new Set<number>();
     while (cur && !guard.has(cur.id)) {
       guard.add(cur.id);
-      if (cur.kind === "college") college = String(cur.id);
+      if (cur.kind === "university") university = String(cur.id);
+      else if (cur.kind === "college") college = String(cur.id);
       else if (cur.kind === "establishment") establishment = String(cur.id);
       else if (cur.kind === "department") department = String(cur.id);
       else if (cur.kind === "section") section = String(cur.id);
       cur = cur.parent_id ? byId.get(cur.parent_id) : undefined;
     }
+    setUniversityId(university);
     setCollegeId(college);
     setEstablishmentId(establishment);
     setDepartmentId(department);
     setSectionId(section);
   }, [value, units, byId]);
 
-  const colleges = units.filter((u) => u.kind === "college" && u.is_active);
+  const universities = units.filter((u) => u.kind === "university" && u.is_active);
+  const colleges = units.filter(
+    (u) =>
+      u.kind === "college" &&
+      u.is_active &&
+      (!universityId || String(u.parent_id) === universityId)
+  );
+  // An establishment can sit under the chosen College, or — if no College is
+  // chosen (or the establishment isn't in any) — directly under the
+  // University, matching the backend's "central office" attachment.
   const establishments = units.filter(
     (u) =>
       u.kind === "establishment" &&
       u.is_active &&
-      (!collegeId || String(u.parent_id) === collegeId)
+      ((collegeId && String(u.parent_id) === collegeId) ||
+        (!collegeId && universityId && String(u.parent_id) === universityId) ||
+        (!collegeId && !universityId))
   );
   const departments = units.filter(
     (u) =>
       u.kind === "department" &&
       u.is_active &&
-      (!collegeId ||
-        String(u.parent_id) === collegeId ||
-        (establishmentId && String(u.parent_id) === establishmentId))
+      ((collegeId && String(u.parent_id) === collegeId) ||
+        (establishmentId && String(u.parent_id) === establishmentId) ||
+        (!collegeId && universityId && String(u.parent_id) === universityId) ||
+        (!collegeId && !universityId))
   );
   const parentForSections = departmentId || establishmentId;
   const sections = units.filter(
@@ -99,17 +116,44 @@ export function OrgUnitPicker({
   );
 
   function emit(
+    university: string,
     college: string,
     establishment: string,
     department: string,
     section: string
   ) {
-    const deepest = section || department || establishment || college || "";
+    const deepest =
+      section || department || establishment || college || university || "";
     onChange(deepest ? Number(deepest) : null);
   }
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
+      <div>
+        <label className="label">University</label>
+        <select
+          className="input"
+          value={universityId}
+          disabled={disabled}
+          onChange={(e) => {
+            const v = e.target.value;
+            setUniversityId(v);
+            setCollegeId("");
+            setEstablishmentId("");
+            setDepartmentId("");
+            setSectionId("");
+            emit(v, "", "", "", "");
+          }}
+        >
+          <option value="">— (any)</option>
+          {universities.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div>
         <label className="label">
           College {required ? "*" : ""}
@@ -124,10 +168,12 @@ export function OrgUnitPicker({
             setEstablishmentId("");
             setDepartmentId("");
             setSectionId("");
-            emit(v, "", "", "");
+            emit(universityId, v, "", "", "");
           }}
         >
-          <option value="">Select…</option>
+          <option value="">
+            {universityId ? "— (central office, no college)" : "Select…"}
+          </option>
           {colleges.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -141,17 +187,17 @@ export function OrgUnitPicker({
         <select
           className="input"
           value={establishmentId}
-          disabled={disabled || !collegeId}
+          disabled={disabled}
           onChange={(e) => {
             const v = e.target.value;
             setEstablishmentId(v);
             setDepartmentId("");
             setSectionId("");
-            emit(collegeId, v, "", "");
+            emit(universityId, collegeId, v, "", "");
           }}
         >
           <option value="">
-            {!collegeId ? "Pick a College first" : "— (whole college)"}
+            {collegeId ? "— (whole college)" : "— (whole university)"}
           </option>
           {establishments.map((u) => (
             <option key={u.id} value={u.id}>
@@ -166,12 +212,12 @@ export function OrgUnitPicker({
         <select
           className="input"
           value={departmentId}
-          disabled={disabled || !collegeId}
+          disabled={disabled}
           onChange={(e) => {
             const v = e.target.value;
             setDepartmentId(v);
             setSectionId("");
-            emit(collegeId, establishmentId, v, "");
+            emit(universityId, collegeId, establishmentId, v, "");
           }}
         >
           <option value="">— (none)</option>
@@ -192,7 +238,7 @@ export function OrgUnitPicker({
           onChange={(e) => {
             const v = e.target.value;
             setSectionId(v);
-            emit(collegeId, establishmentId, departmentId, v);
+            emit(universityId, collegeId, establishmentId, departmentId, v);
           }}
         >
           <option value="">— (office level)</option>

@@ -14,6 +14,7 @@ import unicodedata
 
 from sqlalchemy.orm import Session
 
+from app.core.auto_migrate import sync_enum_types, sync_missing_columns
 from app.core.database import Base, SessionLocal, engine
 from app.core.permissions import DEFAULT_ROLES, PERMISSIONS
 from app.core.security import hash_password
@@ -159,11 +160,25 @@ def seed_designations(db: Session) -> dict[str, Designation]:
 def seed_org_units(
     db: Session, locations: dict[str, Location]
 ) -> dict[str, OrgUnit]:
-    """Colleges -> Establishments / Departments -> Sections, in dependency order."""
+    """University -> Colleges -> Establishments / Departments -> Sections, in dependency order."""
     units: dict[str, OrgUnit] = {}
 
     def _loc_id(k):
         return locations[k].id if k in locations else None
+
+    # 0. University — the one true root of the tree.
+    for order, (key, name, short, loc) in enumerate(md.ORG_UNIVERSITY):
+        u = OrgUnit(
+            kind=OrgUnitKind.university,
+            name=name,
+            short_code=short.upper(),
+            code=key,
+            location_id=_loc_id(loc),
+            sort_order=order,
+        )
+        db.add(u)
+        units[key] = u
+    db.flush()
 
     # 1. Colleges
     for order, (key, name, short, parent_key, loc) in enumerate(md.ORG_COLLEGES):
@@ -450,6 +465,8 @@ def main(keep: bool = False) -> None:
         reset_database()
     else:
         Base.metadata.create_all(bind=engine)
+        sync_enum_types(engine, Base)
+        sync_missing_columns(engine, Base)
 
     db = SessionLocal()
     try:
@@ -482,6 +499,7 @@ def main(keep: bool = False) -> None:
             db, roles, units, people
         )
 
+        universities = sum(1 for u in units.values() if getattr(u, "kind", None) == OrgUnitKind.university)
         colleges = sum(1 for u in units.values() if getattr(u, "kind", None) == OrgUnitKind.college)
         establishments = sum(
             1 for u in units.values() if getattr(u, "kind", None) == OrgUnitKind.establishment
@@ -502,6 +520,7 @@ def main(keep: bool = False) -> None:
 
     print("\nSeed complete.")
     print(f"  Campuses / locations : {len(locations)}")
+    print(f"  Universities         : {universities}")
     print(f"  Colleges             : {colleges}")
     print(f"  Establishments       : {establishments}")
     print(f"  Academic departments : {departments}")

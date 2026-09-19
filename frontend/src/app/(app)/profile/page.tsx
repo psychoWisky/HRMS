@@ -31,6 +31,9 @@ interface EmployeeDetail {
   gender: string;
   date_of_birth: string | null;
   date_of_joining: string | null;
+  date_of_joining_aau_avfu: string | null;
+  date_of_joining_present_post: string | null;
+  expected_date_of_retirement: string | null;
   post_label: string | null;
   reports_to: string | null;
   employment_status: string;
@@ -98,6 +101,18 @@ export default function ProfilePage() {
             <Field label="Date of Joining" value={fmtDate(data.date_of_joining)} />
             <Field label="Gender" value={data.gender} />
             <Field label="Date of Birth" value={fmtDate(data.date_of_birth)} />
+            <Field
+              label="Date of Joining AAU/AVFU"
+              value={fmtDate(data.date_of_joining_aau_avfu)}
+            />
+            <Field
+              label="Date of Joining Present Post"
+              value={fmtDate(data.date_of_joining_present_post)}
+            />
+            <Field
+              label="Expected Date of Retirement"
+              value={fmtDate(data.expected_date_of_retirement)}
+            />
           </div>
 
           <div className="mt-5 rounded-xl bg-[var(--color-surface-2)] p-4">

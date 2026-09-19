@@ -45,6 +45,9 @@ interface Submission {
   phone: string;
   gender: string;
   date_of_birth: string | null;
+  date_of_joining_aau_avfu: string | null;
+  date_of_joining_present_post: string | null;
+  expected_date_of_retirement: string | null;
   org_unit_id: number | null;
   org_unit: string | null;
   designation_id: number | null;
@@ -348,6 +351,18 @@ export default function SubmissionsPage() {
                 <Field label="Mobile" value={open.phone} />
                 <Field label="Email" value={open.email} />
                 <Field label="Date of birth" value={open.date_of_birth} />
+                <Field
+                  label="Date of joining AAU/AVFU"
+                  value={open.date_of_joining_aau_avfu}
+                />
+                <Field
+                  label="Date of joining present post"
+                  value={open.date_of_joining_present_post}
+                />
+                <Field
+                  label="Expected date of retirement"
+                  value={open.expected_date_of_retirement}
+                />
                 <Field label="Gender" value={open.gender} />
                 <Field label="Blood group" value={open.blood_group} />
                 <Field label="Father's name" value={open.father_name} />

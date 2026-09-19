@@ -62,6 +62,7 @@ export const ORG_TYPE_LABEL: Record<string, string> = {
 
 /** OrgUnit kind + sub_kind -> label. */
 export const ORG_UNIT_KIND_LABEL: Record<string, string> = {
+  university: "University",
   college: "College",
   establishment: "Establishment",
   department: "Department",

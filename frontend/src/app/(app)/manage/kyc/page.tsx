@@ -54,6 +54,9 @@ interface KYCRecord {
   father_name: string;
   mother_name: string;
   date_of_birth: string | null;
+  date_of_joining_aau_avfu: string | null;
+  date_of_joining_present_post: string | null;
+  expected_date_of_retirement: string | null;
   gender: string;
   blood_group: string;
   marital_status: string;
@@ -259,6 +262,18 @@ export default function EmployeeDocumentsPage() {
                 <Field label="Father's Name" value={open.father_name} />
                 <Field label="Mother's Name" value={open.mother_name} />
                 <Field label="Date of Birth" value={open.date_of_birth} />
+                <Field
+                  label="Date of Joining AAU/AVFU"
+                  value={open.date_of_joining_aau_avfu}
+                />
+                <Field
+                  label="Date of Joining Present Post"
+                  value={open.date_of_joining_present_post}
+                />
+                <Field
+                  label="Expected Date of Retirement"
+                  value={open.expected_date_of_retirement}
+                />
                 <Field label="Gender" value={open.gender} />
                 <Field label="Blood Group" value={open.blood_group} />
                 <Field label="Marital Status" value={open.marital_status} />

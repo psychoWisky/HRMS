@@ -2,7 +2,7 @@
 
 The AVFU hierarchy is a fixed-depth tree of ``OrgUnit`` rows:
 
-    college  ->  establishment | department  ->  section (section/unit/cell)
+    university  ->  college  ->  establishment | department  ->  section (section/unit/cell)
 
 Everything here is derived from ``parent_id`` — nothing about the AVFU
 structure is hard-coded.
@@ -16,11 +16,17 @@ from app.models.models import Employee, OrgUnit, OrgUnitKind, Post, User
 # Guards against a cycle introduced by bad data making traversal run forever.
 MAX_CHAIN_DEPTH = 50
 
-# Which parent kinds each kind may attach to. college has no parent.
+# Which parent kinds each kind may attach to. university has no parent —
+# it is the true root. A college's parent is optional (None, or the
+# university). An establishment/department may attach to a college or
+# straight to the university (a central office reporting to AVFU itself).
 VALID_PARENT_KINDS: dict[OrgUnitKind, set[OrgUnitKind | None]] = {
-    OrgUnitKind.college: {None},
-    OrgUnitKind.establishment: {OrgUnitKind.college},
-    OrgUnitKind.department: {OrgUnitKind.college, OrgUnitKind.establishment},
+    OrgUnitKind.university: {None},
+    OrgUnitKind.college: {None, OrgUnitKind.university},
+    OrgUnitKind.establishment: {OrgUnitKind.college, OrgUnitKind.university},
+    OrgUnitKind.department: {
+        OrgUnitKind.college, OrgUnitKind.establishment, OrgUnitKind.university,
+    },
     OrgUnitKind.section: {OrgUnitKind.establishment, OrgUnitKind.department, OrgUnitKind.section},
 }
 
@@ -61,7 +67,7 @@ def assert_valid_parent(
 # Tree traversal
 # ---------------------------------------------------------------------------
 def org_unit_ancestors(db: Session, unit_id: int) -> list[OrgUnit]:
-    """From the immediate parent up to the root college, in that order."""
+    """From the immediate parent up to the root university, in that order."""
     chain: list[OrgUnit] = []
     seen: set[int] = {unit_id}
     current = db.get(OrgUnit, unit_id)
@@ -159,10 +165,18 @@ def sanctioned_counts_by_unit(db: Session) -> dict[int, int]:
 def department_scope_ids(db: Session, user: User) -> set[int] | None:
     """Org-unit ids a user's actions are limited to.
 
-    ``None`` = unrestricted (Admin, HR, Super Admin, or any account with no
-    ``managed_org_unit_id``). A Department Head's scope is their assigned
-    unit plus everything beneath it.
+    ``None`` = unrestricted (Admin, HR, Super Admin). A Department Head's
+    scope is their assigned unit plus everything beneath it.
+
+    A ``department_head`` account with no ``managed_org_unit_id`` assigned
+    yet is scoped to nothing (an empty set) rather than being treated as
+    unrestricted — an unassigned Department Head must see no data, never
+    all of it, until Admin/HR assigns their department.
     """
+    if user.role and user.role.code == "department_head":
+        if not user.managed_org_unit_id:
+            return set()
+        return org_unit_descendant_ids(db, user.managed_org_unit_id)
     if not user.managed_org_unit_id:
         return None
     return org_unit_descendant_ids(db, user.managed_org_unit_id)

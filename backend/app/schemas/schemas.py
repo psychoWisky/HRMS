@@ -308,6 +308,9 @@ class EmployeeCreate(BaseModel):
     hrms_employee_id: str | None = None  # auto-generated when omitted
     gender: str = ""
     date_of_birth: date | None = None
+    date_of_joining_aau_avfu: date | None = None
+    date_of_joining_present_post: date | None = None
+    expected_date_of_retirement: date | None = None
     official_email: str = ""
     phone: str = ""
     photo_url: str = ""
@@ -330,6 +333,9 @@ class EmployeeUpdate(BaseModel):
     full_name: str | None = None
     gender: str | None = None
     date_of_birth: date | None = None
+    date_of_joining_aau_avfu: date | None = None
+    date_of_joining_present_post: date | None = None
+    expected_date_of_retirement: date | None = None
     official_email: str | None = None
     phone: str | None = None
     photo_url: str | None = None
@@ -416,6 +422,9 @@ class EmployeeDetail(EmployeeSummary):
     gender: str = ""
     date_of_birth: date | None = None
     date_of_joining: date | None = None
+    date_of_joining_aau_avfu: date | None = None
+    date_of_joining_present_post: date | None = None
+    expected_date_of_retirement: date | None = None
     post_id: int | None = None
     post_label: str | None = None
     location_id: int | None = None
@@ -488,6 +497,9 @@ class KYCInfoUpdate(BaseModel):
     father_name: str | None = None
     mother_name: str | None = None
     date_of_birth: date | None = None
+    date_of_joining_aau_avfu: date | None = None
+    date_of_joining_present_post: date | None = None
+    expected_date_of_retirement: date | None = None
     gender: str | None = None
     blood_group: str | None = None
     marital_status: str | None = None
@@ -539,6 +551,9 @@ class KYCOut(ORMModel):
     father_name: str = ""
     mother_name: str = ""
     date_of_birth: date | None = None
+    date_of_joining_aau_avfu: date | None = None
+    date_of_joining_present_post: date | None = None
+    expected_date_of_retirement: date | None = None
     gender: str = ""
     blood_group: str = ""
     marital_status: str = ""
@@ -667,6 +682,9 @@ class SubmissionInfo(BaseModel):
     phone: str = ""
     gender: str = ""
     date_of_birth: date | None = None
+    date_of_joining_aau_avfu: date | None = None
+    date_of_joining_present_post: date | None = None
+    expected_date_of_retirement: date | None = None
     org_unit_id: int | None = None
     designation_id: int | None = None
     location_id: int | None = None
@@ -694,6 +712,9 @@ class SubmissionUpdate(BaseModel):
     phone: str | None = None
     gender: str | None = None
     date_of_birth: date | None = None
+    date_of_joining_aau_avfu: date | None = None
+    date_of_joining_present_post: date | None = None
+    expected_date_of_retirement: date | None = None
     org_unit_id: int | None = None
     designation_id: int | None = None
     location_id: int | None = None
@@ -747,6 +768,9 @@ class SubmissionPublicOut(BaseModel):
     phone: str
     gender: str
     date_of_birth: date | None
+    date_of_joining_aau_avfu: date | None = None
+    date_of_joining_present_post: date | None = None
+    expected_date_of_retirement: date | None = None
     org_unit_id: int | None
     org_unit: str | None
     designation_id: int | None
@@ -802,6 +826,9 @@ class SubmissionApproval(BaseModel):
     reports_to_id: int | None = None
     hrms_employee_id: str | None = None
     date_of_joining: date | None = None
+    date_of_joining_aau_avfu: date | None = None
+    date_of_joining_present_post: date | None = None
+    expected_date_of_retirement: date | None = None
 
 
 # ============================================================================
@@ -821,6 +848,35 @@ class UserOut(ORMModel):
     hrms_employee_id: str | None = None
     managed_org_unit_id: int | None = None
     managed_org_unit_name: str | None = None
+    needs_department_assignment: bool = False
+
+
+class PersonOut(BaseModel):
+    """One row per employee for Users & Roles — every employee appears here,
+    whether or not they have a login yet. Assigning a role to someone with
+    no login creates one automatically."""
+
+    employee_id: int
+    employee_name: str
+    hrms_employee_id: str
+    designation: str | None = None
+    organization: str | None = None
+    has_login: bool
+    user_id: int | None = None
+    login_email: str | None = None
+    role_code: str = ""
+    role_name: str = ""
+    is_active: bool = True
+    must_change_password: bool = False
+    last_login_at: datetime | None = None
+    managed_org_unit_id: int | None = None
+    managed_org_unit_name: str | None = None
+    needs_department_assignment: bool = False
+
+
+class PersonRoleUpdate(BaseModel):
+    role_code: str
+    login_email: str | None = None
 
 
 class UserRoleUpdate(BaseModel):

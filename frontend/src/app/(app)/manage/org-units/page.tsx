@@ -44,7 +44,21 @@ interface LocationOption {
   name: string;
 }
 
-const KINDS = ["college", "establishment", "department", "section"] as const;
+const KINDS = ["university", "college", "establishment", "department", "section"] as const;
+const KIND_SORT_ORDER: Record<string, number> = {
+  university: 0,
+  college: 1,
+  establishment: 2,
+  department: 2,
+  section: 3,
+};
+// Mirrors backend app.services.org.VALID_PARENT_KINDS — which parent kinds
+// a given kind may attach to (sections/units/cells are edited elsewhere).
+const VALID_PARENT_KINDS_BY_KIND: Record<string, string[]> = {
+  college: ["university"],
+  establishment: ["college", "university"],
+  department: ["college", "establishment", "university"],
+};
 const SUB_KINDS = ["section", "unit", "cell"];
 
 const BLANK = {
@@ -90,7 +104,16 @@ export default function ManageOrgUnitsPage() {
     () =>
       rows
         .filter((u) => u.kind !== "section")
-        .sort((a, b) => a.path.localeCompare(b.path)),
+        .sort((a, b) => {
+          // Group by tier first (University, then Colleges, then
+          // Establishments/Departments) so unrelated branches never
+          // interleave with each other just because their path strings
+          // happen to sort next to one another alphabetically.
+          const tierDiff =
+            (KIND_SORT_ORDER[a.kind] ?? 9) - (KIND_SORT_ORDER[b.kind] ?? 9);
+          if (tierDiff !== 0) return tierDiff;
+          return a.path.localeCompare(b.path);
+        }),
     [rows]
   );
   const filtered = kindFilter
@@ -186,10 +209,46 @@ export default function ManageOrgUnitsPage() {
     }
   }
 
+  const [cleaningUp, setCleaningUp] = useState(false);
+  const legacyAvfu = rows.find(
+    (r) =>
+      r.kind === "college" &&
+      (r.code?.toLowerCase() === "avfu" ||
+        r.short_code?.toLowerCase() === "avfu" ||
+        r.name.toLowerCase().includes("assam veterinary and fishery university"))
+  );
+
+  async function promoteAvfuToUniversity() {
+    setCleaningUp(true);
+    try {
+      const result = await api.post<{
+        status: string;
+        reparented_colleges?: string[];
+        reparented_offices?: string[];
+      }>("/api/org-units/promote-avfu-to-university");
+      if (result.status === "noop") {
+        push("success", "Already done — AVFU is already the university");
+      } else {
+        const collegeCount = result.reparented_colleges?.length ?? 0;
+        const officeCount = result.reparented_offices?.length ?? 0;
+        push(
+          "success",
+          `AVFU is now the University. Moved ${collegeCount} college(s) and ${officeCount} central office(s) to sit directly under it.`
+        );
+      }
+      reload();
+    } catch (err) {
+      push("error", err instanceof ApiError ? err.message : "Could not update");
+    } finally {
+      setCleaningUp(false);
+    }
+  }
+
   const columns: Column<OrgUnit>[] = [
     {
       header: "Name",
-      value: (r) => `${r.name} ${r.short_code}`,
+      className: "min-w-[240px]",
+      value: (r) => `${r.name} ${r.short_code} ${r.college_name ?? ""}`,
       cell: (r) => (
         <div>
           {r.kind === "college" ? (
@@ -205,34 +264,45 @@ export default function ManageOrgUnitsPage() {
           <p className="text-xs text-[var(--color-ink-faint)]">
             {r.parent_name ? `under ${r.parent_name}` : "top level"}
             {r.short_code ? ` · ${r.short_code}` : ""}
+            {r.college_name ? ` · ${r.college_name}` : ""}
           </p>
         </div>
       ),
     },
     {
       header: "Kind",
+      className: "w-32 whitespace-nowrap",
       value: (r) => r.kind,
       cell: (r) => orgUnitLabel(r.kind, r.sub_kind),
     },
-    { header: "College", value: (r) => r.college_name ?? "", cell: (r) => r.college_name ?? "—" },
-    { header: "Campus", value: (r) => r.location_name ?? "", cell: (r) => r.location_name ?? "—" },
+    {
+      header: "Campus",
+      className: "w-40",
+      value: (r) => r.location_name ?? "",
+      cell: (r) => r.location_name ?? "—",
+    },
     {
       header: "Head / OIC",
+      className: "w-44",
       value: (r) => r.head_name ?? r.officer_in_charge_name ?? "",
       cell: (r) => r.head_name ?? r.officer_in_charge_name ?? "—",
     },
     {
-      header: "Employees",
+      header: "Staff",
+      className: "w-24 text-center whitespace-nowrap",
       value: (r) => r.employee_count,
-      cell: (r) => r.employee_count,
-    },
-    {
-      header: "Sub-units",
-      value: (r) => r.child_count,
-      cell: (r) => r.child_count,
+      cell: (r) => (
+        <span title={`${r.employee_count} employee(s), ${r.child_count} sub-unit(s)`}>
+          {r.employee_count}
+          {r.child_count > 0 && (
+            <span className="text-[var(--color-ink-faint)]"> · {r.child_count} sub</span>
+          )}
+        </span>
+      ),
     },
     {
       header: "Status",
+      className: "w-28 whitespace-nowrap",
       value: (r) => (r.is_active ? "active" : "inactive"),
       cell: (r) => (
         <StatusBadge status={r.is_active ? "active" : "cancelled"} />
@@ -240,10 +310,11 @@ export default function ManageOrgUnitsPage() {
     },
     {
       header: "",
+      className: "w-40 whitespace-nowrap",
       value: () => "",
       cell: (r) =>
         canManage(r.kind) ? (
-          <div className="flex gap-1">
+          <div className="flex flex-nowrap gap-1.5">
             <button
               onClick={() => openEdit(r)}
               className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
@@ -271,6 +342,27 @@ export default function ManageOrgUnitsPage() {
         title="Organisation Structure"
         subtitle="Colleges, Establishments, Departments and their Sections/Units/Cells. Open an Establishment or Department to edit its Part A / B / C."
       />
+
+      {legacyAvfu && canStructure && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-danger)] bg-[#fbf0f0] p-4">
+          <p className="text-sm text-[var(--color-ink)]">
+            <strong>&quot;{legacyAvfu.name}&quot;</strong> is listed here as a
+            College, but it&apos;s the University — the whole thing everything
+            else sits under, not one org among others. Fixing this makes it
+            the top-level University and moves CVSc, CFSc, LCVSc and the
+            central offices (VC Office, Registrar, Comptroller, etc.) to sit
+            directly under it, where they belong. Nothing is deleted.
+          </p>
+          <button
+            onClick={promoteAvfuToUniversity}
+            disabled={cleaningUp}
+            className="btn btn-primary shrink-0"
+            style={{ background: "var(--color-danger)" }}
+          >
+            {cleaningUp ? <Spinner /> : "Make AVFU the University"}
+          </button>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <select
@@ -364,20 +456,28 @@ export default function ManageOrgUnitsPage() {
                 </p>
               </div>
             )}
-            {form.kind !== "college" && (
+            {form.kind !== "university" && (
               <div>
-                <label className="label">Parent *</label>
+                <label className="label">
+                  Parent {form.kind === "college" ? "" : "*"}
+                </label>
                 <select
                   className="input"
                   value={form.parent_id}
                   onChange={(e) => set("parent_id", e.target.value)}
                 >
-                  <option value="">Select…</option>
-                  {parentOptions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.path}
-                    </option>
-                  ))}
+                  <option value="">
+                    {form.kind === "college" ? "None (independent)" : "Select…"}
+                  </option>
+                  {parentOptions
+                    .filter((p) =>
+                      (VALID_PARENT_KINDS_BY_KIND[form.kind] ?? []).includes(p.kind)
+                    )
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {orgUnitLabel(p.kind)}: {p.path}
+                      </option>
+                    ))}
                 </select>
               </div>
             )}

@@ -349,6 +349,8 @@ def reporting_chart(
         raise HTTPException(status_code=404, detail="Employee not found")
     _assert_employee_visible(db, user, root)
 
+    scope = department_scope_ids(db, user)
+
     def build(emp: Employee, level: int) -> dict:
         node = {
             "id": emp.id,
@@ -359,8 +361,14 @@ def reporting_chart(
             "children": [],
         }
         if level < depth:
+            # A subordinate's reporting line doesn't have to mirror the org
+            # tree (e.g. a cross-department secondment) — re-check scope on
+            # every descendant, not just the root, so a Department Head
+            # can't see into another department via a reporting chain.
             node["children"] = [
-                build(child, level + 1) for child in direct_reports(db, emp.id)
+                build(child, level + 1)
+                for child in direct_reports(db, emp.id)
+                if scope is None or child.org_unit_id in scope
             ]
         return node
 

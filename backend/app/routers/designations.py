@@ -19,6 +19,7 @@ from app.schemas.schemas import (
 from app.services.hierarchy import occupied_counts
 from app.services.org import (
     assert_unit_in_scope,
+    department_scope_ids,
     org_unit_descendant_ids as org_descendant_ids,
 )
 from app.services.serializers import post_out
@@ -198,6 +199,10 @@ def list_posts(
             query = query.filter(Post.org_unit_id == org_unit_id)
     if designation_id is not None:
         query = query.filter(Post.designation_id == designation_id)
+
+    scope = department_scope_ids(db, user)
+    if scope is not None:
+        query = query.filter(Post.org_unit_id.in_(scope))
 
     occupied = occupied_counts(db)
     # `posts` has two FKs to `designations`, so the join must be explicit.

@@ -44,6 +44,9 @@ interface Submission {
   phone: string;
   gender: string;
   date_of_birth: string | null;
+  date_of_joining_aau_avfu: string | null;
+  date_of_joining_present_post: string | null;
+  expected_date_of_retirement: string | null;
   org_unit_id: number | null;
   org_unit: string | null;
   designation_id: number | null;
@@ -93,6 +96,8 @@ const BLANK = {
   phone: "",
   gender: "",
   date_of_birth: "",
+  date_of_joining_aau_avfu: "",
+  date_of_joining_present_post: "",
   org_unit_id: "",
   designation_id: "",
   location_id: "",
@@ -120,7 +125,17 @@ const PERSONAL: [keyof Form, string, string?, boolean?][] = [
   ["full_name", "Full name", "text", true],
   ["phone", "Mobile number", "tel", true],
   ["email", "Email address", "email"],
-  ["date_of_birth", "Date of birth", "date", true],
+  ["date_of_birth", "Date of birth (attach proof)", "date", true],
+  [
+    "date_of_joining_aau_avfu",
+    "Date of joining AAU/AVFU (attach proof)",
+    "date",
+  ],
+  [
+    "date_of_joining_present_post",
+    "Date of joining present post (attach proof)",
+    "date",
+  ],
   ["gender", "Gender"],
   ["blood_group", "Blood group"],
   ["marital_status", "Marital status"],
@@ -257,7 +272,12 @@ function SubmitPageContent() {
     for (const key of ["org_unit_id", "designation_id", "location_id"]) {
       out[key] = form[key as keyof Form] ? Number(form[key as keyof Form]) : null;
     }
-    for (const key of ["date_of_birth", "date_of_joining"]) {
+    for (const key of [
+      "date_of_birth",
+      "date_of_joining_aau_avfu",
+      "date_of_joining_present_post",
+      "date_of_joining",
+    ]) {
       out[key] = form[key as keyof Form] || null;
     }
     return out;
@@ -379,6 +399,8 @@ function SubmitPageContent() {
       phone: record.phone ?? "",
       gender: record.gender ?? "",
       date_of_birth: record.date_of_birth ?? "",
+      date_of_joining_aau_avfu: record.date_of_joining_aau_avfu ?? "",
+      date_of_joining_present_post: record.date_of_joining_present_post ?? "",
       org_unit_id: String(record.org_unit_id ?? ""),
       designation_id: String(record.designation_id ?? ""),
       location_id: String(record.location_id ?? ""),

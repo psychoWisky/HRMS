@@ -19,6 +19,7 @@ from app.core.permissions import (
     ORG_READ,
     STRUCTURE_MANAGE,
 )
+from app.data import avfu_master_data as md
 from app.models.models import (
     Employee,
     Location,
@@ -55,6 +56,7 @@ router = APIRouter(prefix="/api", tags=["Org units"])
 OFFICE_KINDS = {OrgUnitKind.establishment, OrgUnitKind.department}
 # Kinds managed with structure:manage rather than the section permissions.
 STRUCTURAL_KINDS = {
+    OrgUnitKind.university,
     OrgUnitKind.college,
     OrgUnitKind.establishment,
     OrgUnitKind.department,
@@ -154,6 +156,25 @@ def update_location(
     db.commit()
     db.refresh(loc)
     return LocationOut.model_validate(loc)
+
+
+@router.delete("/locations/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
+def deactivate_location(
+    location_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_perm(ORG_DELETE)),
+):
+    """Soft-delete: campuses stay in employees' history, so this deactivates
+    rather than removing the row. Reactivate via ``PUT`` with
+    ``is_active: true``."""
+    loc = db.get(Location, location_id)
+    if loc is None:
+        raise HTTPException(status_code=404, detail="Location not found")
+    loc.is_active = False
+    audit.log(db, user, "location.deactivate", entity_type="location", entity_id=loc.id,
+              summary=f"Deactivated location {loc.name}", ip=client_ip(request))
+    db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -394,11 +415,117 @@ def delete_org_unit(
     db.commit()
 
 
+@router.post("/org-units/promote-avfu-to-university")
+def promote_avfu_to_university(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_perm(STRUCTURE_MANAGE)),
+):
+    """One-off: turn the legacy "AVFU" college row into the University — the
+    true root of the tree — instead of deleting it.
+
+    AVFU is the university, not a college or department, so:
+      1. The AVFU row's ``kind`` is changed from ``college`` to ``university``.
+      2. Every other top-level college (CVSc, CFSc, LCVSc — any college with
+         no parent) is re-parented under it.
+      3. Any establishment/department that used to be crammed under a
+         college purely because AVFU had nowhere else to put it (identified
+         by name match against the central-office list in the current seed
+         data) is re-parented directly onto the university node instead,
+         where it belongs.
+
+    Nothing is deleted and no employee is moved. Safe to call more than
+    once — later calls are a no-op once AVFU is already a university with
+    everything correctly parented.
+    """
+    avfu = (
+        db.query(OrgUnit)
+        .filter(OrgUnit.kind.in_([OrgUnitKind.college, OrgUnitKind.university]))
+        .filter(
+            (OrgUnit.code.ilike("avfu"))
+            | (OrgUnit.short_code.ilike("avfu"))
+            | (OrgUnit.name.ilike("%Assam Veterinary and Fishery University%"))
+        )
+        .all()
+    )
+    if not avfu:
+        return {"status": "noop", "detail": "No AVFU org-unit row found."}
+    if len(avfu) > 1:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Found {len(avfu)} candidate AVFU rows (ids "
+            f"{[a.id for a in avfu]}) — expected exactly one. Resolve manually.",
+        )
+    avfu_unit = avfu[0]
+
+    already_done = avfu_unit.kind == OrgUnitKind.university
+    if not already_done:
+        avfu_unit.kind = OrgUnitKind.university
+        avfu_unit.parent_id = None
+
+    # Every other top-level college reports to the university now.
+    other_top_colleges = (
+        db.query(OrgUnit)
+        .filter(OrgUnit.kind == OrgUnitKind.college)
+        .filter(OrgUnit.id != avfu_unit.id)
+        .filter((OrgUnit.parent_id.is_(None)) | (OrgUnit.parent_id != avfu_unit.id))
+        .all()
+    )
+    reparented_colleges = []
+    for college in other_top_colleges:
+        if college.parent_id != avfu_unit.id:
+            college.parent_id = avfu_unit.id
+            reparented_colleges.append(college.name)
+
+    # Central-office establishments/departments that were forced under a
+    # college (because AVFU used to be a dead-end college with nowhere to
+    # attach them) move to sit directly under the university, matching the
+    # current seed data's _EST_COLLEGE mapping for "avfu"-tagged offices.
+    central_office_names = {name for _ck, _key, name, *_r in md.ESTABLISHMENTS_DATA if _ck == "avfu"}
+    reparented_offices = []
+    if central_office_names:
+        offices = (
+            db.query(OrgUnit)
+            .filter(OrgUnit.kind.in_([OrgUnitKind.establishment, OrgUnitKind.department]))
+            .filter(OrgUnit.name.in_(central_office_names))
+            .filter(OrgUnit.parent_id != avfu_unit.id)
+            .all()
+        )
+        for office in offices:
+            office.parent_id = avfu_unit.id
+            reparented_offices.append(office.name)
+
+    db.flush()
+
+    if already_done and not reparented_colleges and not reparented_offices:
+        return {"status": "noop", "detail": "AVFU is already the university with everything correctly parented."}
+
+    audit.log(
+        db, user, "org_unit.promote_avfu_to_university",
+        entity_type="org_unit", entity_id=avfu_unit.id,
+        summary=(
+            f"Promoted AVFU to university; re-parented {len(reparented_colleges)} "
+            f"college(s) and {len(reparented_offices)} central office(s) under it"
+        ),
+        detail={"colleges": reparented_colleges, "offices": reparented_offices},
+        ip=client_ip(request),
+    )
+    db.commit()
+
+    return {
+        "status": "done",
+        "reparented_colleges": reparented_colleges,
+        "reparented_offices": reparented_offices,
+    }
+
+
 def _assert_short_code_free(
     db: Session, kind: OrgUnitKind, short_code: str | None, exclude_id: int | None
 ) -> None:
     """Short codes must be unique within a kind (they build Employee IDs)."""
-    if not short_code or kind not in (OrgUnitKind.college, OrgUnitKind.establishment, OrgUnitKind.department):
+    if not short_code or kind not in (
+        OrgUnitKind.university, OrgUnitKind.college, OrgUnitKind.establishment, OrgUnitKind.department,
+    ):
         return
     clash = (
         db.query(OrgUnit)

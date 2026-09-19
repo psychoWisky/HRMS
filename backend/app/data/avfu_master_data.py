@@ -383,7 +383,6 @@ ESTABLISHMENTS_DATA = [
 # ---------------------------------------------------------------------------
 # (name, short_name, category, rank_level) — lower rank = more senior
 DESIGNATIONS = [
-    ("Chancellor", "", "officer", 1),
     ("Vice-Chancellor", "VC", "officer", 2),
     ("Registrar", "", "officer", 5),
     ("Financial Officer", "FO", "officer", 5),
@@ -400,7 +399,6 @@ DESIGNATIONS = [
     ("Associate Director of Extension Education", "ADEE", "officer", 10),
     ("Deputy Director of Student Welfare", "DDSW", "officer", 10),
     ("Deputy Comptroller", "", "officer", 10),
-    ("Prof & I/C Head cum Director", "", "officer", 11),
     ("Chief Scientist", "", "scientific", 12),
     ("Assistant Comptroller", "", "accounts", 12),
     ("Deputy Librarian", "", "administrative", 13),
@@ -410,10 +408,13 @@ DESIGNATIONS = [
     ("Associate Professor", "", "teaching", 16),
     ("Assistant Professor", "", "teaching", 17),
 
-    ("Principal Scientist", "", "scientific", 16),
     ("Senior Scientist", "Sr. Scientist", "scientific", 17),
     ("Scientist", "", "scientific", 18),
 
+    ("Senior Extension Specialist", "Sr. Ext. Specialist", "scientific", 17),
+    ("Extension Specialist", "", "scientific", 18),
+
+    ("Finance Officer", "FO", "officer", 5),
     ("Administrative Officer", "AO", "administrative", 20),
     ("Executive Engineer", "EE", "technical", 20),
     ("Medical Officer", "MO", "technical", 20),
@@ -574,20 +575,20 @@ POSTS = [
      "Administrative Officer / SMO / Dean / Registrar", ""),
 
     # ---- Veterinary Clinical Complex --------------------------------------
-    ("vcc", "Prof & I/C Head cum Director", 1, 0, "1", "Dean, FVSc, AVFU", ""),
-    ("vcc", "Associate Professor", 3, 0, "2", "Prof & I/C Head cum Director, VCC", ""),
-    ("vcc", "Assistant Professor", 5, 0, "3", "Prof & I/C Head cum Director, VCC", ""),
+    ("vcc", "Professor", 1, 0, "1", "Dean, FVSc, AVFU", ""),
+    ("vcc", "Associate Professor", 3, 0, "2", "Professor, VCC", ""),
+    ("vcc", "Assistant Professor", 5, 0, "3", "Professor, VCC", ""),
     ("vcc", "Junior Administrative Assistant", 1, 1, "4",
-     "Prof & I/C Head cum Director, VCC", "Nil in position"),
+     "Professor, VCC", "Nil in position"),
     ("vcc", "Field Assistant-II (Technical Supervisor-II)", 0, 0, "5",
-     "Prof & I/C Head cum Director, VCC",
+     "Professor, VCC",
      "Looking after all office administration and accounts work in place of JAA"),
     ("vcc", "Veterinary Field Assistant-II", 0, 0, "6", "Assistant Professor", ""),
     ("vcc", "Resident Veterinary Doctor", 0, 0, "7",
-     "Prof & I/C Head cum Director, VCC", "1 in contractual position"),
+     "Professor, VCC", "1 in contractual position"),
     ("vcc", "Young Professional-II (Vety. Doctor)", 0, 0, "8",
-     "Prof & I/C Head cum Director, VCC", "1 in contractual position"),
-    ("vcc", "Computer Assistant", 1, 0, "9", "Prof & I/C Head cum Director, VCC",
+     "Professor, VCC", "1 in contractual position"),
+    ("vcc", "Computer Assistant", 1, 0, "9", "Professor, VCC",
      "1 in contractual position working in registration counter"),
     ("vcc", "Scientific Supervisor-II", 2, 2, "10", "Assistant Professor", "Nil"),
     ("vcc", "Scientific Assistant", 3, 0, "11", "Assistant Professor",
@@ -667,8 +668,7 @@ POSTS = [
 
     # ---- Livestock Research Station, Mandira ------------------------------
     ("lrs_mandira", "Chief Scientist", 1, 0, "1", "Director of Research", ""),
-    ("lrs_mandira", "Principal Scientist", 1, 0, "2", "Chief Scientist", ""),
-    ("lrs_mandira", "Senior Scientist", 1, 0, "3", "Chief Scientist", ""),
+    ("lrs_mandira", "Senior Scientist", 2, 0, "2/3", "Chief Scientist", ""),
     ("lrs_mandira", "Scientist", 7, 2, "4", "Chief Scientist", "2 vacant"),
     ("lrs_mandira", "Field Assistant-II (Technical Supervisor-II)", 1, 0, "5",
      "Chief Scientist", "FA II"),
@@ -999,19 +999,27 @@ SYSTEM_SETTINGS = [
 # Built from the lists above so the seed has one flat, ordered source.
 # ===========================================================================
 
-# The AVFU root college and its three constituent colleges.
-#   (key, name, short_code, parent_key|None, location_key)
-ORG_COLLEGES = [
-    ("avfu", "Assam Veterinary and Fishery University", "AVFU", None, "khanapara"),
-    ("cvsc", "College of Veterinary Science, Khanapara", "CVSC", "avfu", "khanapara"),
-    ("cfsc", "College of Fishery Science, Raha", "CFSC", "avfu", "raha"),
-    ("lcvsc", "Lakhimpur College of Veterinary Science, Joyhing", "LCVSC", "avfu", "joyhing"),
+# The university itself — the one true root of the tree.
+#   (key, name, short_code, location_key)
+ORG_UNIVERSITY = [
+    ("avfu_univ", "Assam Veterinary and Fishery University", "AVFU", "khanapara"),
 ]
 
-# Establishments (administrative offices). Parent is a college key.
+# The three constituent colleges, each parented to the university.
+#   (key, name, short_code, parent_key|None, location_key)
+ORG_COLLEGES = [
+    ("cvsc", "College of Veterinary Science, Khanapara", "CVSC", "avfu_univ", "khanapara"),
+    ("cfsc", "College of Fishery Science, Raha", "CFSC", "avfu_univ", "raha"),
+    ("lcvsc", "Lakhimpur College of Veterinary Science, Joyhing", "LCVSC", "avfu_univ", "joyhing"),
+]
+
+# Establishments (administrative offices). Parent is a college key, or the
+# university itself for central offices that report straight to AVFU.
 #   (key, name, short_code, college_key, location_key)
-# college_key "avfu" attaches AVFU-combined offices to the university root.
-_EST_COLLEGE = {"avfu": "avfu", "fvsc": "cvsc", "ffsc": "cfsc", "lcvsc": "lcvsc"}
+# college_key "avfu" attaches the central university offices (VC Office,
+# Registrar, Comptroller, the Directorates, etc.) directly to the
+# university node — they are not any one college's establishments.
+_EST_COLLEGE = {"avfu": "avfu_univ", "fvsc": "cvsc", "ffsc": "cfsc", "lcvsc": "lcvsc"}
 ORG_ESTABLISHMENTS = [
     (key, name, short, _EST_COLLEGE[ck], loc)
     for (ck, key, name, _sn, short, loc) in ESTABLISHMENTS_DATA

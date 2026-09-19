@@ -39,6 +39,7 @@ from app.schemas.schemas import (
 from app.services import storage
 from app.services.hierarchy import would_create_reporting_cycle
 from app.services.org import department_scope_ids
+from app.services.retirement import calc_retirement_date
 
 router = APIRouter(tags=["Submission review"])
 submissions_router = APIRouter(prefix="/api/submissions", tags=["Submission review"])
@@ -59,6 +60,9 @@ def _admin_out(db: Session, record: EmployeeSubmission) -> SubmissionAdminOut:
         phone=record.phone,
         gender=record.gender,
         date_of_birth=record.date_of_birth,
+        date_of_joining_aau_avfu=record.date_of_joining_aau_avfu,
+        date_of_joining_present_post=record.date_of_joining_present_post,
+        expected_date_of_retirement=record.expected_date_of_retirement,
         org_unit_id=record.org_unit_id,
         org_unit=record.org_unit.name if record.org_unit else None,
         designation_id=record.designation_id,
@@ -360,11 +364,26 @@ def approve_submission(
             status_code=409, detail=f"HRMS Employee ID {hrms_id} is already in use"
         )
 
+    dob = record.date_of_birth
+    designation = db.get(Designation, designation_id) if designation_id else None
+    expected_retirement = (
+        payload.expected_date_of_retirement
+        or record.expected_date_of_retirement
+        or calc_retirement_date(dob, designation.rank_level if designation else None)
+    )
+
     employee = Employee(
         hrms_employee_id=hrms_id,
         full_name=record.full_name,
         gender=record.gender,
-        date_of_birth=record.date_of_birth,
+        date_of_birth=dob,
+        date_of_joining_aau_avfu=(
+            payload.date_of_joining_aau_avfu or record.date_of_joining_aau_avfu
+        ),
+        date_of_joining_present_post=(
+            payload.date_of_joining_present_post or record.date_of_joining_present_post
+        ),
+        expected_date_of_retirement=expected_retirement,
         official_email=record.email,
         phone=record.phone,
         org_unit_id=org_unit_id,
@@ -414,6 +433,9 @@ def approve_submission(
         father_name=record.father_name,
         mother_name=record.mother_name,
         date_of_birth=record.date_of_birth,
+        date_of_joining_aau_avfu=employee.date_of_joining_aau_avfu,
+        date_of_joining_present_post=employee.date_of_joining_present_post,
+        expected_date_of_retirement=employee.expected_date_of_retirement,
         gender=record.gender,
         blood_group=record.blood_group,
         marital_status=record.marital_status,

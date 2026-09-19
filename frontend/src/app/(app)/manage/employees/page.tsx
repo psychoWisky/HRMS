@@ -5,14 +5,16 @@ import Link from "next/link";
 import {
   Camera,
   Copy,
+  Download,
   History,
   KeyRound,
   Pencil,
   Power,
   TrendingUp,
+  Upload,
   UserPlus,
 } from "lucide-react";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, downloadFile } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useAuth } from "@/lib/auth";
 import { P } from "@/lib/perms";
@@ -84,6 +86,9 @@ const BLANK = {
   gender: "",
   date_of_birth: "",
   date_of_joining: "",
+  date_of_joining_aau_avfu: "",
+  date_of_joining_present_post: "",
+  expected_date_of_retirement: "",
   org_unit_id: "" as string,
   location_id: "",
   designation_id: "",
@@ -135,6 +140,15 @@ export default function ManageEmployeesPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoTarget, setPhotoTarget] = useState<number | null>(null);
 
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{
+    created: number;
+    failed: number;
+    errors: string[];
+  } | null>(null);
+
   const canCreate = can(P.employeeCreate);
   const canEdit = can(P.employeeEdit);
   const canDeactivate = can(P.employeeDelete);
@@ -155,6 +169,9 @@ export default function ManageEmployeesPage() {
         gender: form.gender,
         date_of_birth: form.date_of_birth || null,
         date_of_joining: form.date_of_joining || null,
+        date_of_joining_aau_avfu: form.date_of_joining_aau_avfu || null,
+        date_of_joining_present_post: form.date_of_joining_present_post || null,
+        expected_date_of_retirement: form.expected_date_of_retirement || null,
         org_unit_id: numeric(form.org_unit_id),
         location_id: numeric(form.location_id),
         designation_id: numeric(form.designation_id),
@@ -170,6 +187,46 @@ export default function ManageEmployeesPage() {
       push("error", err instanceof ApiError ? err.message : "Could not create employee");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function downloadBulkTemplate() {
+    try {
+      await downloadFile(
+        "/api/employees/bulk-import/template",
+        "employee_bulk_import_template.xlsx"
+      );
+    } catch (err) {
+      push("error", err instanceof ApiError ? err.message : "Could not download template");
+    }
+  }
+
+  async function uploadBulkFile() {
+    if (!bulkFile) {
+      push("error", "Choose a .xlsx file first");
+      return;
+    }
+    setBulkBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", bulkFile);
+      const result = await api.upload<{
+        created: number;
+        failed: number;
+        errors: string[];
+      }>("/api/employees/bulk-import", fd);
+      setBulkResult(result);
+      if (result.created) {
+        push("success", `${result.created} employee(s) created`);
+        reload();
+      }
+      if (result.failed) {
+        push("error", `${result.failed} row(s) failed — see details below`);
+      }
+    } catch (err) {
+      push("error", err instanceof ApiError ? err.message : "Bulk upload failed");
+    } finally {
+      setBulkBusy(false);
     }
   }
 
@@ -509,6 +566,43 @@ export default function ManageEmployeesPage() {
               onChange={(e) => setForm({ ...form, date_of_joining: e.target.value })}
             />
           </div>
+          <div>
+            <label className="label">Date of joining AAU/AVFU</label>
+            <input
+              className="input"
+              type="date"
+              value={form.date_of_joining_aau_avfu}
+              onChange={(e) =>
+                setForm({ ...form, date_of_joining_aau_avfu: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <label className="label">Date of joining present post</label>
+            <input
+              className="input"
+              type="date"
+              value={form.date_of_joining_present_post}
+              onChange={(e) =>
+                setForm({ ...form, date_of_joining_present_post: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <label className="label">Expected date of retirement</label>
+            <input
+              className="input"
+              type="date"
+              value={form.expected_date_of_retirement}
+              onChange={(e) =>
+                setForm({ ...form, expected_date_of_retirement: e.target.value })
+              }
+            />
+            <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
+              Auto-calculated from date of birth and designation (65 for
+              Professor &amp; above, 60 otherwise) if left blank.
+            </p>
+          </div>
         </>
       )}
     </div>
@@ -530,9 +624,21 @@ export default function ManageEmployeesPage() {
           subtitle="Create employee records, assign them within the university and issue login credentials."
         />
         {canCreate && (
-          <button onClick={() => setCreateOpen(true)} className="btn btn-primary">
-            <UserPlus size={18} /> Create employee
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setBulkResult(null);
+                setBulkFile(null);
+                setBulkOpen(true);
+              }}
+              className="btn btn-ghost"
+            >
+              <Upload size={18} /> Bulk upload
+            </button>
+            <button onClick={() => setCreateOpen(true)} className="btn btn-primary">
+              <UserPlus size={18} /> Create employee
+            </button>
+          </div>
         )}
       </div>
 
@@ -582,6 +688,59 @@ export default function ManageEmployeesPage() {
         >
           {busy ? <Spinner /> : "Create employee and issue credentials"}
         </button>
+      </Modal>
+
+      {/* Bulk upload */}
+      <Modal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title="Bulk upload current employees"
+        wide
+      >
+        <p className="text-sm text-[var(--color-ink-soft)]">
+          Use this to onboard employees already working at the university
+          when the HRMS goes live. Download the template, fill in one row per
+          employee, then upload it here. No login accounts are created and no
+          proof documents are attached this way — HR can add those
+          individually afterwards from each employee&apos;s KYC record.
+        </p>
+        <button
+          onClick={downloadBulkTemplate}
+          className="btn btn-ghost mt-4 w-full"
+        >
+          <Download size={18} /> Download template (.xlsx)
+        </button>
+        <div className="mt-4">
+          <label className="label">Upload filled template</label>
+          <input
+            className="input"
+            type="file"
+            accept=".xlsx"
+            onChange={(e) => setBulkFile(e.target.files?.[0] ?? null)}
+          />
+        </div>
+        <button
+          onClick={uploadBulkFile}
+          className="btn btn-primary mt-4 w-full"
+          disabled={bulkBusy || !bulkFile}
+        >
+          {bulkBusy ? <Spinner /> : "Upload and create employees"}
+        </button>
+
+        {bulkResult && (
+          <div className="mt-4 rounded-xl bg-[var(--color-surface-2)] p-3 text-sm">
+            <p className="font-semibold">
+              {bulkResult.created} created · {bulkResult.failed} failed
+            </p>
+            {bulkResult.errors.length > 0 && (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-[var(--color-ink-soft)]">
+                {bulkResult.errors.map((e, i) => (
+                  <li key={i}>{e}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </Modal>
 
       {/* Edit */}

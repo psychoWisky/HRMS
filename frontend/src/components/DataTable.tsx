@@ -171,7 +171,11 @@ export function DataTable<T extends { id: number | string }>({
                     return (
                       <th
                         key={i}
-                        className={`px-4 py-2.5 ${c.className ?? ""}`}
+                        className={`px-4 py-2.5 ${
+                          i === 0
+                            ? "sticky left-0 z-10 bg-[var(--color-green)]"
+                            : ""
+                        } ${c.className ?? ""}`}
                         aria-sort={
                           active
                             ? sortDir === "asc"
@@ -209,10 +213,17 @@ export function DataTable<T extends { id: number | string }>({
                 {visible.map((row) => (
                   <tr
                     key={row.id}
-                    className="border-t border-[var(--color-line)] bg-white text-[15px] transition-colors hover:bg-[var(--color-bg)]"
+                    className="group border-t border-[var(--color-line)] bg-white text-[15px] transition-colors hover:bg-[var(--color-bg)]"
                   >
                     {columns.map((c, ci) => (
-                      <td key={ci} className={`px-4 py-2.5 ${c.className ?? ""}`}>
+                      <td
+                        key={ci}
+                        className={`px-4 py-2.5 ${
+                          ci === 0
+                            ? "sticky left-0 z-10 border-r border-[var(--color-line)] bg-white group-hover:bg-[var(--color-bg)]"
+                            : ""
+                        } ${c.className ?? ""}`}
+                      >
                         {c.cell(row)}
                       </td>
                     ))}

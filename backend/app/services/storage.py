@@ -26,6 +26,10 @@ DOCUMENT_TYPES = [
     "Experience Certificate",
     "Bank Passbook",
     "Photograph",
+    "Date of Birth Proof",
+    "Date of Joining AAU/AVFU Proof",
+    "Date of Joining Present Post Proof",
+    "Retirement Date Calculation Proof",
     "Other",
 ]
 

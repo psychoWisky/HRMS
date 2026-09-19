@@ -1,7 +1,9 @@
 """Employee management (Admin/HR/Department Head) and self-service profile."""
+import io
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -51,7 +53,9 @@ from app.schemas.schemas import (
 )
 from app.services import storage
 from app.services.employee_id import next_employee_id
+from app.services import bulk_import
 from app.services.hierarchy import direct_reports, reporting_chain
+from app.services.retirement import calc_retirement_date
 from app.services.org import (
     assert_employee_in_scope,
     department_scope_ids,
@@ -133,6 +137,9 @@ def _detail(db: Session, emp: Employee) -> EmployeeDetail:
         gender=emp.gender,
         date_of_birth=emp.date_of_birth,
         date_of_joining=emp.date_of_joining,
+        date_of_joining_aau_avfu=emp.date_of_joining_aau_avfu,
+        date_of_joining_present_post=emp.date_of_joining_present_post,
+        expected_date_of_retirement=emp.expected_date_of_retirement,
         post_id=emp.post_id,
         post_label=post_label,
         location_id=emp.location_id,
@@ -313,11 +320,21 @@ def create_employee(
         if value is not None and db.get(model, value) is None:
             raise HTTPException(status_code=400, detail=f"{label} not found")
 
+    designation = (
+        db.get(Designation, payload.designation_id) if payload.designation_id else None
+    )
+    expected_retirement = payload.expected_date_of_retirement or calc_retirement_date(
+        payload.date_of_birth, designation.rank_level if designation else None
+    )
+
     emp = Employee(
         hrms_employee_id=hrms_id,
         full_name=payload.full_name.strip(),
         gender=payload.gender,
         date_of_birth=payload.date_of_birth,
+        date_of_joining_aau_avfu=payload.date_of_joining_aau_avfu,
+        date_of_joining_present_post=payload.date_of_joining_present_post,
+        expected_date_of_retirement=expected_retirement,
         official_email=payload.official_email.strip().lower(),
         phone=payload.phone,
         photo_url=payload.photo_url,
@@ -403,6 +420,95 @@ def create_employee(
     )
 
 
+# ---------------------------------------------------------------------------
+# Bulk import — onboarding current employees in one pass
+# ---------------------------------------------------------------------------
+@router.get("/bulk-import/template")
+def bulk_import_template(user: User = Depends(require_perm(EMPLOYEE_CREATE))):
+    wb = bulk_import.build_template()
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="employee_bulk_import_template.xlsx"'
+        },
+    )
+
+
+@router.post("/bulk-import")
+def bulk_import_employees(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_perm(EMPLOYEE_CREATE)),
+):
+    """Create many current employees at once from an uploaded .xlsx sheet.
+
+    Each row becomes its own transaction-safe attempt: a bad row is reported
+    and skipped rather than aborting the whole sheet. No login accounts are
+    created here; HR issues those individually afterwards if needed.
+    """
+    contents = file.file.read()
+    try:
+        rows = bulk_import.parse_rows(contents)
+    except bulk_import.RowError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if not rows:
+        raise HTTPException(status_code=400, detail="The sheet has no data rows")
+
+    scope = department_scope_ids(db, user)
+
+    created = 0
+    errors: list[str] = []
+    for i, row in enumerate(rows, start=2):  # row 1 is the header
+        try:
+            emp = bulk_import.create_employee_from_row(db, row, i, _generate_id)
+            if scope is not None and emp.org_unit_id not in scope:
+                raise bulk_import.RowError(
+                    f"Row {i}: that org unit is outside the department you manage"
+                )
+            db.add(emp)
+            db.flush()
+            db.add(KYC(employee_id=emp.id, status=KYCStatus.not_started))
+            db.add(
+                PositionHistory(
+                    employee_id=emp.id,
+                    event_type=PositionEventType.joining,
+                    new_designation_id=emp.designation_id,
+                    new_org_unit_id=emp.org_unit_id,
+                    new_employee_code=emp.hrms_employee_id,
+                    new_pay_scale=emp.pay_scale,
+                    effective_date=emp.date_of_joining or date.today(),
+                    new_position_joining_date=emp.date_of_joining,
+                    remarks="Bulk-imported as a current employee",
+                    created_by_id=user.id,
+                )
+            )
+            created += 1
+        except bulk_import.RowError as exc:
+            db.rollback()
+            errors.append(str(exc))
+
+    if created:
+        audit.log(
+            db,
+            user,
+            "employee.bulk_import",
+            entity_type="employee",
+            entity_id=0,
+            summary=f"Bulk-imported {created} employee(s)",
+            detail={"created": created, "failed": len(errors)},
+            ip=client_ip(request),
+        )
+        db.commit()
+
+    return {"created": created, "failed": len(errors), "errors": errors}
+
+
 @router.get("/{employee_id}", response_model=EmployeeDetail)
 def get_employee(
     employee_id: int,
@@ -448,6 +554,16 @@ def update_employee(
         value = changes.get(field)
         if value is not None and db.get(model, value) is None:
             raise HTTPException(status_code=400, detail=f"{label} not found")
+
+    if (
+        "date_of_birth" in changes or "designation_id" in changes
+    ) and "expected_date_of_retirement" not in changes:
+        dob = changes.get("date_of_birth", emp.date_of_birth)
+        designation_id = changes.get("designation_id", emp.designation_id)
+        designation = db.get(Designation, designation_id) if designation_id else None
+        changes["expected_date_of_retirement"] = calc_retirement_date(
+            dob, designation.rank_level if designation else None
+        )
 
     before = {k: getattr(emp, k) for k in changes}
     for key, value in changes.items():
@@ -733,6 +849,7 @@ def issue_credentials(
     emp = db.get(Employee, employee_id)
     if emp is None:
         raise HTTPException(status_code=404, detail="Employee not found")
+    _require_scope(db, user, emp)
 
     temp_password = generate_temporary_password()
 

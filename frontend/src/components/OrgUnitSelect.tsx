@@ -14,8 +14,9 @@ interface Unit {
   is_active: boolean;
 }
 
-const GROUP_ORDER = ["college", "establishment", "department", "section"];
+const GROUP_ORDER = ["university", "college", "establishment", "department", "section"];
 const GROUP_TITLE: Record<string, string> = {
+  university: "University",
   college: "Colleges",
   establishment: "Establishments",
   department: "Departments",
@@ -130,7 +131,7 @@ export function OrgUnitSelect({
 
       {open && (
         <div
-          className="absolute z-30 mt-1.5 w-full min-w-[280px] overflow-hidden rounded-xl border bg-[var(--color-surface)]"
+          className="absolute z-30 mt-1.5 w-max min-w-full max-w-[min(32rem,90vw)] overflow-hidden rounded-xl border bg-[var(--color-surface)]"
           style={{
             borderColor: "var(--color-line)",
             boxShadow: "var(--shadow-md)",
@@ -181,7 +182,7 @@ export function OrgUnitSelect({
                       onChange(u.id);
                       setOpen(false);
                     }}
-                    className={`block w-full truncate px-4 py-2 text-left text-sm hover:bg-[var(--color-green-tint)] ${
+                    className={`block w-full whitespace-normal break-words px-4 py-2 text-left text-sm leading-snug hover:bg-[var(--color-green-tint)] ${
                       value === u.id
                         ? "bg-[var(--color-green-tint)] font-semibold text-[var(--color-green)]"
                         : ""
@@ -192,6 +193,11 @@ export function OrgUnitSelect({
                     {u.kind === "section" && u.sub_kind && (
                       <span className="ml-1.5 text-xs text-[var(--color-ink-faint)]">
                         ({orgUnitLabel("section", u.sub_kind)})
+                      </span>
+                    )}
+                    {u.path !== u.name && (
+                      <span className="block text-xs text-[var(--color-ink-faint)]">
+                        {u.path}
                       </span>
                     )}
                   </button>

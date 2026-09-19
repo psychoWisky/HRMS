@@ -5,7 +5,7 @@ arrive through the public submission form (``app/routers/public.py``) and are
 carried onto the employee's KYC record when HR admits them. HR can also
 amend a record and re-verify it afterwards.
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import (
     APIRouter,
@@ -42,6 +42,7 @@ from app.schemas.schemas import (
 )
 from app.services import storage
 from app.services.org import department_scope_ids, org_path
+from app.services.retirement import calc_retirement_date
 
 router = APIRouter(prefix="/api/kyc", tags=["KYC"])
 
@@ -103,6 +104,9 @@ def _kyc_out(db: Session, record: KYC) -> KYCOut:
                 "father_name",
                 "mother_name",
                 "date_of_birth",
+                "date_of_joining_aau_avfu",
+                "date_of_joining_present_post",
+                "expected_date_of_retirement",
                 "gender",
                 "blood_group",
                 "marital_status",
@@ -207,6 +211,12 @@ def update_kyc(
     """HR maintains the record on the employee's behalf."""
     record = _get(db, kyc_id, user)
     changes = payload.model_dump(exclude_unset=True)
+    if "date_of_birth" in changes and "expected_date_of_retirement" not in changes:
+        designation = record.employee.designation if record.employee else None
+        changes["expected_date_of_retirement"] = calc_retirement_date(
+            changes["date_of_birth"],
+            designation.rank_level if designation else None,
+        )
     before = {k: getattr(record, k) for k in changes}
     for key, value in changes.items():
         setattr(record, key, value)
@@ -276,6 +286,7 @@ def download_document(
     db: Session = Depends(get_db),
     user: User = Depends(require_perm(KYC_VERIFY)),
 ):
+    _get(db, kyc_id, user)  # 403s if this KYC record is outside the caller's scope
     doc = db.get(KYCDocument, doc_id)
     if doc is None or doc.kyc_id != kyc_id:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -291,6 +302,7 @@ def delete_document(
     db: Session = Depends(get_db),
     user: User = Depends(require_perm(KYC_VERIFY)),
 ):
+    _get(db, kyc_id, user)  # 403s if this KYC record is outside the caller's scope
     doc = db.get(KYCDocument, doc_id)
     if doc is None or doc.kyc_id != kyc_id:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -307,6 +319,7 @@ def verify_document(
     db: Session = Depends(get_db),
     user: User = Depends(require_perm(KYC_VERIFY)),
 ):
+    _get(db, kyc_id, user)  # 403s if this KYC record is outside the caller's scope
     doc = db.get(KYCDocument, doc_id)
     if doc is None or doc.kyc_id != kyc_id:
         raise HTTPException(status_code=404, detail="Document not found")

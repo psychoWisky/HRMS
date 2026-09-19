@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Pencil, Plus } from "lucide-react";
+import { MapPin, Pencil, Plus, Power } from "lucide-react";
 import { ApiError, api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useAuth } from "@/lib/auth";
@@ -48,6 +48,21 @@ export default function ManageCampusesPage() {
 
   const canCreate = can(P.orgCreate);
   const canEdit = can(P.orgEdit);
+  const canDelete = can(P.orgDelete);
+
+  async function toggleActive(row: Location) {
+    try {
+      if (row.is_active) {
+        await api.del(`/api/locations/${row.id}`);
+      } else {
+        await api.put(`/api/locations/${row.id}`, { is_active: true });
+      }
+      push("success", row.is_active ? "Campus deactivated" : "Campus reactivated");
+      reload();
+    } catch (err) {
+      push("error", err instanceof ApiError ? err.message : "Action failed");
+    }
+  }
 
   async function save() {
     setBusy(true);
@@ -107,28 +122,41 @@ export default function ManageCampusesPage() {
     },
     {
       header: "",
-      cell: (r) =>
-        canEdit ? (
-          <button
-            onClick={() => {
-              setEditing(r);
-              setForm({
-                name: r.name,
-                code: r.code,
-                address: r.address,
-                city: r.city,
-                district: r.district,
-                state: r.state,
-                pincode: r.pincode,
-              });
-              setOpen(true);
-            }}
-            className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
-            title="Edit"
-          >
-            <Pencil size={15} /> <span>Edit</span>
-          </button>
-        ) : null,
+      cell: (r) => (
+        <div className="flex flex-nowrap gap-1.5">
+          {canEdit && (
+            <button
+              onClick={() => {
+                setEditing(r);
+                setForm({
+                  name: r.name,
+                  code: r.code,
+                  address: r.address,
+                  city: r.city,
+                  district: r.district,
+                  state: r.state,
+                  pincode: r.pincode,
+                });
+                setOpen(true);
+              }}
+              className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-green)] hover:bg-[var(--color-green-tint)]"
+              title="Edit"
+            >
+              <Pencil size={15} /> <span>Edit</span>
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => toggleActive(r)}
+              className="rounded-lg border border-[var(--color-line)] p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-2)]"
+              title={r.is_active ? "Deactivate" : "Reactivate"}
+            >
+              <Power size={15} />{" "}
+              <span>{r.is_active ? "Deactivate" : "Reactivate"}</span>
+            </button>
+          )}
+        </div>
+      ),
     },
   ];
 

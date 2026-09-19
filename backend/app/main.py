@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.auto_migrate import sync_enum_types, sync_missing_columns
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.models import models  # noqa: F401  (register models)
@@ -19,6 +20,8 @@ from app.routers import (
 )
 
 Base.metadata.create_all(bind=engine)
+sync_enum_types(engine, Base)
+sync_missing_columns(engine, Base)
 
 app = FastAPI(
     title="AVFU HRMS API",

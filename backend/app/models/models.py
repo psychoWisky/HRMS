@@ -6,11 +6,15 @@ organisational data, never a separate authentication boundary.
 The organisational hierarchy is a single fixed-depth tree of ``OrgUnit``
 rows discriminated by ``kind``:
 
-    College  ->  Establishment | Department  ->  Section/Unit/Cell
+    University  ->  College  ->  Establishment | Department  ->  Section/Unit/Cell
 
-A College is a top-level node (``parent_id is None``).  A Department may
-sit directly under a College or under an Establishment.  Every Employee is
-attached to exactly one ``OrgUnit`` (at any level) plus a Designation and,
+A University is the true top-level node (``parent_id is None``); AVFU is
+the one university row. A College's parent is optional: ``None`` for an
+independent college, or the University. An Establishment or Department may
+attach to a College, or directly to the University (a central office that
+reports straight to the university rather than to any one college). A
+Department may also sit under an Establishment. Every Employee is attached
+to exactly one ``OrgUnit`` (at any level) plus a Designation and,
 optionally, a sanctioned Post.
 """
 from datetime import date, datetime, timezone
@@ -44,17 +48,22 @@ def utcnow() -> datetime:
 class OrgUnitKind(str, enum.Enum):
     """The level of a node in the fixed AVFU hierarchy.
 
-        college       -> a constituent College (AVFU root, CVSc, CFSc, LCVSc).
-                         Top level; ``parent_id is None``.
+        university    -> the University itself (AVFU). True top level;
+                         ``parent_id is None``.
+        college       -> a constituent College (CVSc, CFSc, LCVSc).
+                         Parent is optional: ``None``, or the University.
         establishment -> an administrative office (Directorate, Office,
-                         Research Station). Parent is a College.
-        department    -> an academic teaching department. Parent is a College
-                         or an Establishment.
+                         Research Station). Parent is a College, or the
+                         University directly (a central office that reports
+                         straight to the university).
+        department    -> an academic teaching department. Parent is a
+                         College, an Establishment, or the University.
         section       -> a Section / Unit / Cell under an office (Part C of the
                          AVFU submission format). Parent is an Establishment or
                          a Department. ``sub_kind`` says which of the three.
     """
 
+    university = "university"
     college = "college"
     establishment = "establishment"
     department = "department"
@@ -270,10 +279,11 @@ class Location(Base):
 class OrgUnit(Base):
     """One node of the fixed AVFU hierarchy — see the module docstring.
 
-    ``kind`` places the node on the College -> Establishment|Department ->
-    Section ladder. The Part A "General Information" of the AVFU submission
-    format lives on the ``establishment``/``department`` rows; the Part C
-    "Sections/Units/Cells" list is the ``section`` children of an office.
+    ``kind`` places the node on the University -> College ->
+    Establishment|Department -> Section ladder. The Part A "General
+    Information" of the AVFU submission format lives on the
+    ``establishment``/``department`` rows; the Part C "Sections/Units/Cells"
+    list is the ``section`` children of an office.
     """
 
     __tablename__ = "org_units"
@@ -432,6 +442,14 @@ class Employee(Base):
     full_name: Mapped[str] = mapped_column(String(160), index=True)
     gender: Mapped[str] = mapped_column(String(20), default="")
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Date of joining AAU/AVFU (the university), as distinct from
+    # ``date_of_joining_present_post`` below and from ``date_of_joining``
+    # (the org-unit/post the employee was first attached to in this HRMS).
+    date_of_joining_aau_avfu: Mapped[date | None] = mapped_column(Date, nullable=True)
+    date_of_joining_present_post: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Calculated from date_of_birth + designation (65 for Professor & above,
+    # rank_level <= 15; 60 otherwise). Recalculated on save but editable by HR.
+    expected_date_of_retirement: Mapped[date | None] = mapped_column(Date, nullable=True)
     official_email: Mapped[str] = mapped_column(String(160), default="")
     phone: Mapped[str] = mapped_column(String(30), default="")
     photo_url: Mapped[str] = mapped_column(String(255), default="")
@@ -699,6 +717,13 @@ class KYC(Base):
     father_name: Mapped[str] = mapped_column(String(160), default="")
     mother_name: Mapped[str] = mapped_column(String(160), default="")
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Date of joining AAU/AVFU (the university), as distinct from
+    # ``date_of_joining_present_post`` below.
+    date_of_joining_aau_avfu: Mapped[date | None] = mapped_column(Date, nullable=True)
+    date_of_joining_present_post: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Calculated from date_of_birth + designation (65 for Professor & above,
+    # rank_level <= 15; 60 otherwise). Recalculated on save but editable by HR.
+    expected_date_of_retirement: Mapped[date | None] = mapped_column(Date, nullable=True)
     gender: Mapped[str] = mapped_column(String(20), default="")
     blood_group: Mapped[str] = mapped_column(String(8), default="")
     marital_status: Mapped[str] = mapped_column(String(30), default="")
@@ -819,6 +844,9 @@ class EmployeeSubmission(Base):
     phone: Mapped[str] = mapped_column(String(30), default="")
     gender: Mapped[str] = mapped_column(String(20), default="")
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    date_of_joining_aau_avfu: Mapped[date | None] = mapped_column(Date, nullable=True)
+    date_of_joining_present_post: Mapped[date | None] = mapped_column(Date, nullable=True)
+    expected_date_of_retirement: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # --- proposed placement (chosen by the applicant, confirmed by HR) ---
     org_unit_id: Mapped[int | None] = mapped_column(

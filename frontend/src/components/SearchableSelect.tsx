@@ -68,7 +68,7 @@ export function SearchableSelect({
         <ChevronDown size={16} className={`shrink-0 text-[var(--color-ink-faint)] ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-[100] mt-1.5 w-full min-w-[240px] overflow-hidden rounded-xl border bg-[var(--color-surface)] shadow-xl" style={{ borderColor: "var(--color-line)" }}>
+        <div className="absolute left-0 top-full z-[100] mt-1.5 w-max min-w-full max-w-[min(28rem,90vw)] overflow-hidden rounded-xl border bg-[var(--color-surface)] shadow-xl" style={{ borderColor: "var(--color-line)" }}>
           <div className="relative border-b border-[var(--color-line)] p-2">
             <Search size={15} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)]" />
             <input
@@ -87,9 +87,9 @@ export function SearchableSelect({
               </button>
             )}
             {filtered.length === 0 ? <p className="px-4 py-5 text-center text-sm text-[var(--color-ink-faint)]">No match</p> : filtered.map((option) => (
-              <button key={option.value} type="button" className={`flex w-full items-center justify-between gap-2 px-4 py-2 text-left text-sm hover:bg-[var(--color-green-tint)] ${option.value === value ? "bg-[var(--color-green-tint)] font-semibold text-[var(--color-green)]" : ""}`} onClick={() => { onChange(option.value); setOpen(false); }}>
-                <span className="truncate">{option.label}</span>
-                {option.value === value && <Check size={15} />}
+              <button key={option.value} type="button" className={`flex w-full items-start justify-between gap-2 px-4 py-2 text-left text-sm leading-snug hover:bg-[var(--color-green-tint)] ${option.value === value ? "bg-[var(--color-green-tint)] font-semibold text-[var(--color-green)]" : ""}`} onClick={() => { onChange(option.value); setOpen(false); }} title={option.label}>
+                <span className="whitespace-normal break-words">{option.label}</span>
+                {option.value === value && <Check size={15} className="mt-0.5 shrink-0" />}
               </button>
             ))}
           </div>
