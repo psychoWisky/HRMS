@@ -1,0 +1,388 @@
+<title>HRMS Feature Checklist</title>
+<meta name="description" content="Module-wise breakdown of every implemented feature in the AVFU HRMS, for client sign-off.">
+<style>
+  :root {
+    --ink: #1c231f;
+    --ink-soft: #4b544e;
+    --ink-faint: #7d8880;
+    --line: #dde3de;
+    --line-strong: #c3cdc5;
+    --surface: #ffffff;
+    --surface-2: #f4f6f4;
+    --bg: #eef1ee;
+    --accent: #1f6b4a;
+    --accent-soft: #e8f3ec;
+    --accent-strong: #144d33;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #eef1ee;
+      --ink-soft: #c3cdc5;
+      --ink-faint: #8b978f;
+      --line: #2c3630;
+      --line-strong: #3a463e;
+      --surface: #171e19;
+      --surface-2: #1d251f;
+      --bg: #121712;
+      --accent: #4caf82;
+      --accent-soft: #1b2e24;
+      --accent-strong: #6fcba0;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #eef1ee;
+    --ink-soft: #c3cdc5;
+    --ink-faint: #8b978f;
+    --line: #2c3630;
+    --line-strong: #3a463e;
+    --surface: #171e19;
+    --surface-2: #1d251f;
+    --bg: #121712;
+    --accent: #4caf82;
+    --accent-soft: #1b2e24;
+    --accent-strong: #6fcba0;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  header.doc-head {
+    padding: 8px 4px 28px;
+    border-bottom: 2px solid var(--line-strong);
+    margin-bottom: 28px;
+  }
+  .eyebrow {
+    font-family: "Source Sans 3", sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 600;
+    margin: 8px 0 6px;
+    line-height: 1.15;
+  }
+  .doc-sub {
+    color: var(--ink-soft);
+    font-size: 15.5px;
+    max-width: 62ch;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .module {
+    margin-bottom: 30px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .module-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 22px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .module-head h2 {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .module-num {
+    font-variant-numeric: tabular-nums;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 6px;
+    padding: 2px 8px;
+    letter-spacing: 0.03em;
+  }
+  .module-count {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+  thead th {
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 10px 22px;
+    border-bottom: 1px solid var(--line);
+  }
+  tbody tr { border-bottom: 1px solid var(--line); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td {
+    padding: 13px 22px;
+    vertical-align: top;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  td.feat {
+    color: var(--ink);
+    font-weight: 600;
+    width: 26%;
+    white-space: nowrap;
+  }
+  td.desc { width: auto; }
+  td.status { width: 120px; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill.done { background: var(--accent-soft); color: var(--accent-strong); }
+  .pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .legend {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    margin: 4px 4px 26px;
+    font-size: 13px;
+    color: var(--ink-faint);
+    flex-wrap: wrap;
+  }
+
+  footer.doc-foot {
+    margin-top: 36px;
+    padding: 18px 4px 4px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+
+  @media (max-width: 640px) {
+    thead { display: none; }
+    tbody td { display: block; padding: 6px 18px; }
+    tbody tr { padding: 10px 0; }
+    td.feat { white-space: normal; padding-top: 14px; }
+    td.feat::before { content: "Feature — "; color: var(--ink-faint); font-weight: 700; }
+    td.desc::before { content: "Description — "; color: var(--ink-faint); font-weight: 700; }
+    td.status::before { content: "Status — "; color: var(--ink-faint); font-weight: 700; }
+  }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+
+<div class="wrap">
+  <header class="doc-head">
+    <div class="eyebrow">AVFU HRMS &middot; Feature Checklist</div>
+    <h1>Module-Wise Feature List</h1>
+    <p class="doc-sub">Every module implemented in the HRMS, broken down by feature with a short description of what it does. Shared for client review and sign-off.</p>
+  </header>
+
+  <div class="legend">
+    <span class="pill done">Implemented</span>
+  </div>
+
+  <!-- 1. Authentication & Access -->
+  <div class="module">
+    <div class="module-head">
+      <h2><span class="module-num">01</span> Authentication &amp; Access</h2>
+      <span class="module-count">5 features</span>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">Secure login</td><td class="desc">Email + password login with hashed passwords; issues a session token for all further access.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Forced password change</td><td class="desc">New accounts and password resets require the user to set their own password on first login.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Self-service password reset</td><td class="desc">"Forgot password" flow to regain access without admin involvement.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Role-based permissions</td><td class="desc">Every action in the system is gated by an explicit permission tied to the user's role — enforced on the server, not just hidden in the UI.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Department-scoped access</td><td class="desc">A Department Head only ever sees and manages employees, records and requests belonging to their own department — every other department is invisible to them.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 2. Employee Management -->
+  <div class="module">
+    <div class="module-head">
+      <h2><span class="module-num">02</span> Employee Management</h2>
+      <span class="module-count">9 features</span>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">Employee directory</td><td class="desc">Searchable, filterable list of every employee with designation, department, campus and contact details.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Add employee (manual)</td><td class="desc">Admin/HR form to onboard one employee at a time — personal details, designation, posting, and an optional login account.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Bulk employee upload</td><td class="desc">Download a spreadsheet template, fill in many employees at once, and upload it to create them all in one pass — for onboarding existing staff when the system goes live.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Employee profile fields</td><td class="desc">Date of birth, date of joining AAU/AVFU, date of joining present post, and expected date of retirement (auto-calculated: 65 for Professor &amp; above, 60 for all other roles) — each supporting an attached proof document.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Edit &amp; deactivate employees</td><td class="desc">Update any employee's details, or deactivate/reactivate their record without deleting their history.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Promotion &amp; transfer history</td><td class="desc">Every change of designation, department or post is recorded as a dated event — a full career timeline per employee, nothing is overwritten.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Employee ID generation</td><td class="desc">Permanent HRMS ID auto-generated per employee, following the university's establishment/department coding scheme.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Photo upload</td><td class="desc">Profile photo per employee, shown across the directory and profile screens.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Employee self-profile</td><td class="desc">Logged-in employees can view their own official record and update their own contact details.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 3. New-Employee Self-Submission -->
+  <div class="module">
+    <div class="module-head">
+      <h2><span class="module-num">03</span> New-Employee Self-Submission</h2>
+      <span class="module-count">5 features</span>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">Public joining form</td><td class="desc">An open link (no login needed) where a new joiner fills in their own details and uploads their own documents.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Reference-code tracking</td><td class="desc">Applicant gets a reference code to return to, edit, and track their submission's status any time.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Document upload</td><td class="desc">Applicant attaches Aadhaar, PAN, certificates and other required proofs directly to their submission.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">HR review &amp; approval</td><td class="desc">HR reviews each submission, requests corrections if needed, and approves or rejects it.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Auto-admission on approval</td><td class="desc">Approving a submission automatically creates the full employee record and KYC file — no re-typing of the same data.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 4. KYC & Document Verification -->
+  <div class="module">
+    <div class="module-head">
+      <h2><span class="module-num">04</span> KYC &amp; Document Verification</h2>
+      <span class="module-count">6 features</span>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">Personal &amp; bank details</td><td class="desc">Structured record per employee — family details, ID numbers, address, bank account for payroll.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Document verification workflow</td><td class="desc">Submitted / Under Review / Verified / Resubmission Required / Rejected — a clear status per employee, driven by HR action.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Per-document approval</td><td class="desc">Each uploaded document can be individually marked verified, with a remark, rather than approving the whole file at once.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Audit trail per record</td><td class="desc">Full history of every status change and who made it, per employee's KYC file.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Secure document storage</td><td class="desc">Uploaded files are only ever accessible through authenticated, permission-checked requests — never a public URL.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Department-scoped review</td><td class="desc">A Department Head can only review KYC records for their own department's employees.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 5. Organisation Structure -->
+  <div class="module">
+    <div class="module-head">
+      <h2><span class="module-num">05</span> Organisation Structure</h2>
+      <span class="module-count">6 features</span>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">University &rarr; College &rarr; Department hierarchy</td><td class="desc">AVFU sits as the university at the top; Colleges, Establishments and Departments are structured underneath it, matching the real institution.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Sections, Units &amp; Cells</td><td class="desc">Finer-grained sub-units under any office can be added, for departments that need that level of detail.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Org chart view</td><td class="desc">Visual, browsable organisation chart of the full university structure.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Campuses / locations</td><td class="desc">Physical campuses (Khanapara, Raha, Joyhing, etc.) tracked as their own records and linked to offices and employees.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Sanctioned posts &amp; vacancy tracking</td><td class="desc">Each office's sanctioned strength per designation, with live occupied/vacant counts.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Reporting lines</td><td class="desc">Who reports to whom is tracked explicitly (including cases with more than one reporting authority), with a visual reporting chart.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 6. Designations -->
+  <div class="module">
+    <div class="module-head">
+      <h2><span class="module-num">06</span> Designations</h2>
+      <span class="module-count">3 features</span>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">Full designation catalogue</td><td class="desc">Every designation used across the university, ranked by seniority, with category (teaching, scientific, administrative, accounts, technical, support).</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Add / remove designations</td><td class="desc">Admin/HR can add new designations or retire ones no longer in use, without breaking existing employees' records.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Vacancy &amp; strength reporting</td><td class="desc">Sanctioned vs. occupied vs. vacant count per designation, university-wide.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 7. Users & Roles -->
+  <div class="module">
+    <div class="module-head">
+      <h2><span class="module-num">07</span> Users &amp; Roles</h2>
+      <span class="module-count">6 features</span>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">Every employee listed</td><td class="desc">Every employee appears in Users &amp; Roles, whether or not they already have system access — nothing is hidden from Admin/HR.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">One-click role assignment</td><td class="desc">Give any employee HR, Department Head or Admin access directly; if they don't already have login access, it's created automatically in the same step.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Department Head scoping</td><td class="desc">Assigning "Department Head" requires picking the one department they manage — they see nothing else until it's set, and nothing outside it afterward.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Custom roles &amp; permissions</td><td class="desc">Configure exactly which permissions each role carries, beyond the default Admin/HR/Department Head set.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Activate / deactivate access</td><td class="desc">Suspend or restore a person's login without deleting their employee record.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Password reset by admin</td><td class="desc">Issue a fresh temporary password for anyone who's lost access — the old password is never visible to anyone.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 8. Custom Fields -->
+  <div class="module">
+    <div class="module-head">
+      <h2><span class="module-num">08</span> Custom Fields &amp; Document Rules</h2>
+      <span class="module-count">3 features</span>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">Custom employee fields</td><td class="desc">Add extra fields to the employee profile beyond the built-in ones, without needing a code change.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Document requirement rules</td><td class="desc">Define which documents are mandatory, optionally scoped to a specific department.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Enable / disable fields</td><td class="desc">Retire a custom field or document rule without losing the data already collected against it.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 9. Dashboard & Reports -->
+  <div class="module">
+    <div class="module-head">
+      <h2><span class="module-num">09</span> Dashboard &amp; Reports</h2>
+      <span class="module-count">5 features</span>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">Admin dashboard</td><td class="desc">At-a-glance university-wide counts — employees, pending KYC, pending submissions — by location, department and designation.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Employee self-dashboard</td><td class="desc">A logged-in employee's own summary — their post, reporting authority, and KYC status.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Custom report builder</td><td class="desc">Filter and export employee data by department, designation, campus or status.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Excel export</td><td class="desc">Every report and listing can be downloaded as a formatted Excel file.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+        <tr><td class="feat">Audit log</td><td class="desc">Searchable log of every significant action taken in the system — who did what, and when.</td><td class="status"><span class="pill done">Implemented</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="doc-foot">
+    Prepared for client review &middot; AVFU HRMS &middot; all items listed are implemented and verified in the current build.
+  </footer>
+</div>

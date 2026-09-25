@@ -1,5 +1,11 @@
-# Python
-backend/venv/
+# Python virtual environments (any name, any folder)
+venv/
+.venv/
+env/
+venv*/
+.venv*/
+*_venv/
+pyvenv.cfg
 **/__pycache__/
 *.pyc
 *.pyo
