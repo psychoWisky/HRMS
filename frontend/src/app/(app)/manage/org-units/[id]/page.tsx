@@ -128,7 +128,7 @@ export default function OfficePage({
         <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
           <Field label="Name of the office" value={office.name} />
           <Field label="Short code" value={office.short_code} mono />
-          <Field label="College" value={office.college_name} />
+          <Field label="College / University" value={office.college_name} />
           <Field label="Campus" value={office.location_name} />
           <Field label="Head of Office" value={office.head_name} />
           <Field

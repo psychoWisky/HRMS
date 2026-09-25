@@ -11,6 +11,18 @@ from app.services.org import (
 )
 
 
+def _college_or_university_name(
+    db: Session, unit: OrgUnit | None, college: OrgUnit | None
+) -> str | None:
+    """Display name for the "College / University" field: the nearest
+    College, or the University for central offices that sit under no
+    College. (``college_id`` stays college-only — filters depend on it.)"""
+    if college:
+        return college.name
+    university = nearest_of_kind(db, unit, OrgUnitKind.university) if unit else None
+    return university.name if university else None
+
+
 def org_unit_out(
     db: Session,
     unit: OrgUnit,
@@ -27,7 +39,7 @@ def org_unit_out(
         parent_id=unit.parent_id,
         parent_name=unit.parent.name if unit.parent else None,
         college_id=college.id if college else None,
-        college_name=college.name if college else None,
+        college_name=_college_or_university_name(db, unit, college),
         name=unit.name,
         short_code=unit.short_code,
         code=unit.code,
@@ -79,7 +91,7 @@ def employee_summary(
         id=emp.id,
         hrms_employee_id=emp.hrms_employee_id,
         full_name=emp.full_name,
-        college=college.name if college else None,
+        college=_college_or_university_name(db, unit, college),
         college_id=college.id if college else None,
         department=department.name if department else None,
         department_id=department.id if department else None,

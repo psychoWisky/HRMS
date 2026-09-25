@@ -136,7 +136,7 @@ export default function DirectoryPage() {
               <div className="mt-4 space-y-1 border-t border-[var(--color-line)] pt-3 text-xs">
                 {e.college && (
                   <p className="truncate text-[var(--color-ink-soft)]">
-                    <span className="font-semibold text-[var(--color-ink-muted)]">College:</span> {e.college}
+                    <span className="font-semibold text-[var(--color-ink-muted)]">College / University:</span> {e.college}
                   </p>
                 )}
                 {e.department && (

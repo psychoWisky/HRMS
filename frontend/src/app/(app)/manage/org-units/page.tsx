@@ -264,7 +264,9 @@ export default function ManageOrgUnitsPage() {
           <p className="text-xs text-[var(--color-ink-faint)]">
             {r.parent_name ? `under ${r.parent_name}` : "top level"}
             {r.short_code ? ` · ${r.short_code}` : ""}
-            {r.college_name ? ` · ${r.college_name}` : ""}
+            {r.college_name && r.college_name !== r.name && r.college_name !== r.parent_name
+              ? ` · ${r.college_name}`
+              : ""}
           </p>
         </div>
       ),

@@ -9,6 +9,7 @@ interface Unit {
   id: number;
   kind: string;
   sub_kind: string;
+  parent_id: number | null;
   name: string;
   path: string;
   is_active: boolean;
@@ -77,11 +78,20 @@ export function OrgUnitSelect({
             u.path.toLowerCase().includes(term)
         )
       : units;
+    // A top-level "college" that has colleges under it is really the
+    // University (older data) — group it there, not under Colleges.
+    const parentsOfColleges = new Set(
+      units.filter((u) => u.kind === "college" && u.parent_id).map((u) => u.parent_id)
+    );
     const byKind = new Map<string, Unit[]>();
     for (const u of filtered) {
-      const list = byKind.get(u.kind) ?? [];
+      const kind =
+        u.kind === "college" && !u.parent_id && parentsOfColleges.has(u.id)
+          ? "university"
+          : u.kind;
+      const list = byKind.get(kind) ?? [];
       list.push(u);
-      byKind.set(u.kind, list);
+      byKind.set(kind, list);
     }
     for (const list of byKind.values()) {
       list.sort((a, b) => a.path.localeCompare(b.path));

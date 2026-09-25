@@ -95,7 +95,7 @@ export default function DirectoryProfilePage({
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="HRMS Employee ID" value={employee.hrms_employee_id} mono />
             <Field label="Designation" value={employee.designation} />
-            <Field label="College" value={employee.college ?? "—"} />
+            <Field label="College / University" value={employee.college ?? "—"} />
             <Field label="Department" value={employee.department ?? "—"} />
             <Field label="Establishment" value={employee.establishment ?? "—"} />
             <Field label="Campus / Location" value={employee.location} />
